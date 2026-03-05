@@ -98,9 +98,15 @@ header { background:var(--white); padding:0 32px; height:56px; display:flex; ali
 .badge-name.web { background:var(--blue-badge); color:var(--blue-text); }
 .badge-name.boutique { background:var(--green); color:var(--white); }
 @media(max-width:768px) { .badge-name { display:none; } }
+
+/* PLUS BUTTON desktop */
 .dplus { display:none; position:absolute; top:5px; right:5px; width:22px; height:22px; background:var(--green); color:var(--white); border-radius:50%; font-size:16px; line-height:22px; text-align:center; cursor:pointer; font-weight:300; }
-.dcell:not(.other):hover .dplus { display:block; }
-.dcell.sel .dplus { background:#555; }
+.dcell:not(.other):not(.clickable):hover .dplus { display:block; }
+
+/* EMPTY CELL — tap state (mobile) */
+.dcell.add-ready { background:#F0FAE8!important; cursor:pointer; }
+.dcell.add-ready .dplus { display:none!important; }
+.dcell.add-ready::after { content:'+'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:200; color:var(--green); pointer-events:none; }
 
 /* PANEL */
 .panel { display:none; background:var(--dark); grid-column:1/-1; padding:24px 28px; }
@@ -532,19 +538,44 @@ function renderCal() {
 
   grid.innerHTML = html;
 
+  // Cellules avec commandes → sélection
   grid.querySelectorAll('.dcell.clickable').forEach(function(c) {
     c.addEventListener('click', function(e) {
       if (e.target.classList.contains('dplus')) return;
+      // Retirer add-ready des autres
+      grid.querySelectorAll('.add-ready').forEach(function(x) { x.classList.remove('add-ready'); });
       selectDay(c.getAttribute('data-d'));
     });
   });
 
+  // Cellules vides → 1er tap = add-ready, 2e tap = ouvre modal
+  grid.querySelectorAll('.dcell:not(.other):not(.clickable)').forEach(function(c) {
+    c.addEventListener('click', function(e) {
+      if (e.target.classList.contains('dplus')) { return; }
+      if (c.classList.contains('add-ready')) {
+        c.classList.remove('add-ready');
+        openModal(c.getAttribute('data-d'));
+      } else {
+        grid.querySelectorAll('.add-ready').forEach(function(x) { x.classList.remove('add-ready'); });
+        c.classList.add('add-ready');
+      }
+    });
+  });
+
+  // Bouton + desktop
   grid.querySelectorAll('.dplus').forEach(function(btn) {
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
       openModal(btn.getAttribute('data-d'));
     });
   });
+
+  // Clic ailleurs → retire add-ready
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.dcell')) {
+      grid.querySelectorAll('.add-ready').forEach(function(x) { x.classList.remove('add-ready'); });
+    }
+  }, { once: false });
 
   if (selDate && byDate[selDate]) {
     renderPanel(selDate, byDate[selDate]);
