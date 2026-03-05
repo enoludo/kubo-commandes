@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kubo — Commandes</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F5F4F9;
+  --white: #ffffff;
+  --ink: #1A1A1A;
+  --dark: #333333;
+  --muted: #888888;
+  --border: #333333;
+  --other-month: #EBE9F3;
+  --today-bg: #FFF9ED;
+  --green: #6BB347;
+  --green-light: #EAF5E3;
+  --blue-badge: #E8EEFF;
+  --blue-text: #3A5BD9;
+  --card-border: #E8E8E8;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--ink); font-family:'Poppins',sans-serif; min-height:100vh; font-size:13px; }
+
+/* SCREENS */
+.screen { display:none; position:fixed; inset:0; background:var(--dark); align-items:center; justify-content:center; z-index:100; }
+.screen.on { display:flex; }
+#app { display:none; flex-direction:column; min-height:100vh; }
+#app.on { display:flex; }
+
+/* LOGIN BOX */
+.box { background:var(--white); border-radius:8px; padding:40px; max-width:400px; width:90%; }
+.box-logo { font-size:18px; font-weight:700; letter-spacing:.05em; color:var(--ink); margin-bottom:4px; }
+.box-sub { font-size:11px; color:var(--muted); margin-bottom:28px; text-transform:uppercase; letter-spacing:.1em; }
+.box label { display:block; font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin-bottom:6px; }
+.box input { width:100%; background:#F8F8F8; border:1px solid var(--card-border); border-radius:4px; padding:10px 14px; font-family:'Poppins',sans-serif; font-size:13px; color:var(--ink); outline:none; margin-bottom:16px; }
+.box input:focus { border-color:var(--green); }
+.box-btn { width:100%; background:var(--green); color:var(--white); border:none; border-radius:20px; padding:12px; font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; }
+.box-btn:hover { background:#5CA03A; }
+.box-err { font-size:11px; color:#E74C3C; margin-top:10px; min-height:16px; }
+.box-note { font-size:10px; color:var(--muted); margin-top:14px; line-height:1.6; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
+.shake { animation:shake .4s ease; border-color:#E74C3C!important; }
+
+/* HEADER */
+header { background:var(--white); padding:0 32px; height:56px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--card-border); }
+.hbrand { font-size:15px; font-weight:700; letter-spacing:.05em; color:var(--ink); }
+.hmeta { font-size:11px; color:var(--muted); font-weight:400; }
+.hbtns { display:flex; gap:10px; align-items:center; }
+.btn-green { background:var(--green); color:var(--white); border:none; border-radius:20px; padding:8px 18px; font-family:'Poppins',sans-serif; font-size:11px; font-weight:600; letter-spacing:.05em; cursor:pointer; white-space:nowrap; }
+.btn-green:hover { background:#5CA03A; }
+.btn-outline { background:var(--white); color:var(--dark); border:1px solid #CCCCCC; border-radius:20px; padding:8px 16px; font-family:'Poppins',sans-serif; font-size:11px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:6px; }
+.btn-outline:hover { border-color:#999; }
+.btn-icon { background:none; border:none; color:var(--muted); cursor:pointer; font-size:18px; padding:4px; display:flex; align-items:center; }
+.btn-icon:hover { color:var(--ink); }
+
+/* STATS */
+.stats { background:var(--dark); padding:12px 32px; display:flex; gap:40px; flex-wrap:wrap; }
+.stat { display:flex; flex-direction:column; gap:3px; }
+.stat-l { font-size:9px; font-weight:500; letter-spacing:.12em; text-transform:uppercase; color:#999; }
+.stat-v { font-size:18px; font-weight:700; color:var(--white); }
+
+/* STATUS */
+#statusbar { padding:10px 32px; font-size:11px; display:none; }
+#statusbar.loading { display:block; background:#FFF9ED; color:var(--muted); border-bottom:1px solid #EEE; }
+#statusbar.error { display:block; background:#FFF0F0; color:#E74C3C; border-bottom:1px solid #FFD0D0; }
+
+/* CALENDAR WRAP */
+.cal-wrap { padding:32px; max-width:960px; margin:0 auto; width:100%; }
+
+/* NAV */
+.cal-nav { display:flex; align-items:center; justify-content:center; gap:24px; margin-bottom:24px; }
+.cal-title { font-size:16px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--ink); min-width:180px; text-align:center; }
+.nav-btn { background:var(--white); border:1px solid #CCCCCC; border-radius:50%; width:32px; height:32px; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--dark); }
+.nav-btn:hover { border-color:var(--dark); }
+
+/* GRID */
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); border:1px solid var(--border); }
+.dhead { background:var(--dark); color:var(--white); text-align:center; padding:10px 6px; font-size:10px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; border-right:1px solid #444; }
+.dhead:last-child { border-right:none; }
+.dcell { background:var(--white); min-height:90px; padding:8px; position:relative; border-right:1px solid var(--border); border-bottom:1px solid var(--border); }
+.dcell:nth-child(7n) { border-right:none; }
+.dcell.other { background:var(--other-month); }
+.dcell.today { background:var(--today-bg); }
+.dcell.clickable { cursor:pointer; }
+.dcell.clickable:hover { background:#F0F0F8; }
+.dcell.sel { background:var(--dark)!important; }
+.dcell.sel .dnum { color:var(--white); }
+.dnum { font-size:11px; font-weight:500; color:var(--dark); margin-bottom:5px; }
+.dcell.today .dnum { color:var(--green); font-weight:700; }
+.dcell.other .dnum { color:#BBBBCC; }
+
+/* BADGES */
+.badge { font-size:9px; font-weight:600; padding:2px 7px; border-radius:3px; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
+.badge.web { background:var(--blue-badge); color:var(--blue-text); }
+.badge.boutique { background:var(--green); color:var(--white); }
+.dcount { display:inline-flex; align-items:center; justify-content:center; background:var(--muted); color:var(--white); font-size:9px; font-weight:600; width:18px; height:18px; border-radius:50%; margin-top:2px; }
+
+/* PLUS BUTTON */
+.dplus { display:none; position:absolute; top:5px; right:5px; width:22px; height:22px; background:var(--green); color:var(--white); border-radius:50%; font-size:16px; line-height:22px; text-align:center; cursor:pointer; font-weight:300; }
+.dcell:not(.other):hover .dplus { display:block; }
+.dcell.sel .dplus { background:#555; }
+
+/* PANEL */
+.panel { display:none; background:var(--dark); grid-column:1/-1; padding:24px 28px; }
+.panel.on { display:block; animation:slideDown .2s ease; }
+@keyframes slideDown { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+.panel-date { font-size:11px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:#AAA; margin-bottom:16px; }
+.cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; }
+
+/* CARDS */
+.card { background:var(--white); border-radius:6px; padding:16px; animation:fadeIn .25s ease both; }
+.card-src { display:inline-block; font-size:9px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:3px 8px; border-radius:3px; margin-bottom:10px; }
+.card-src.web { background:var(--blue-badge); color:var(--blue-text); }
+.card-src.boutique { background:var(--green); color:var(--white); }
+.card-header { display:flex; justify-content:space-between; align-items:baseline; padding-bottom:10px; border-bottom:1px solid var(--card-border); margin-bottom:10px; }
+.card-name { font-size:15px; font-weight:600; color:var(--ink); }
+.card-amt { font-size:14px; font-weight:700; color:var(--ink); }
+.crow { display:flex; gap:12px; margin-bottom:6px; align-items:flex-start; }
+.clabel { font-size:9px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); min-width:60px; padding-top:1px; }
+.cval { font-size:12px; color:var(--ink); line-height:1.5; }
+.card-id { font-size:9px; color:#CCC; margin-top:10px; }
+.btn-del { background:none; border:none; color:#CCC; font-size:10px; cursor:pointer; margin-top:8px; font-family:'Poppins',sans-serif; display:block; }
+.btn-del:hover { color:#E74C3C; }
+
+/* MODAL */
+#modal { position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; z-index:200; }
+#modal.on { display:flex; }
+.mbox { background:var(--white); border-radius:8px; padding:32px; max-width:500px; width:90%; max-height:90vh; overflow-y:auto; }
+.mtitle { font-size:17px; font-weight:700; color:var(--ink); margin-bottom:4px; }
+.msub { font-size:11px; color:var(--muted); margin-bottom:24px; }
+.mgrid { display:grid; grid-template-columns:1fr 1fr; gap:0 16px; }
+.mfield { margin-bottom:14px; }
+.mfield.full { grid-column:1/-1; }
+.mfield label { display:block; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:5px; }
+.mfield input { width:100%; background:#F8F8F8; border:1px solid var(--card-border); border-radius:4px; padding:9px 12px; font-family:'Poppins',sans-serif; font-size:12px; color:var(--ink); outline:none; }
+.mfield input:focus { border-color:var(--green); background:var(--white); }
+.prow-header { display:grid; grid-template-columns:1fr 1fr 60px 28px; gap:8px; margin-bottom:4px; }
+.prow-header span { font-size:9px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+.prow { display:grid; grid-template-columns:1fr 1fr 60px 28px; gap:8px; margin-bottom:8px; align-items:center; }
+.prow input { margin-bottom:0; padding:7px 10px; }
+.btn-rmv { background:none; border:none; color:#CCC; font-size:18px; cursor:pointer; line-height:1; padding:0; font-weight:300; }
+.btn-rmv:hover { color:#E74C3C; }
+.btn-addp { width:100%; background:none; border:1px dashed #BBBBBB; border-radius:4px; color:var(--muted); padding:8px; font-family:'Poppins',sans-serif; font-size:10px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; margin-top:4px; }
+.btn-addp:hover { border-color:var(--green); color:var(--green); }
+.mbtns { display:flex; gap:10px; margin-top:20px; }
+.mbtn-save { flex:1; background:var(--green); color:var(--white); border:none; border-radius:20px; padding:11px; font-family:'Poppins',sans-serif; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; }
+.mbtn-save:hover { background:#5CA03A; }
+.mbtn-cancel { background:var(--white); border:1px solid #CCCCCC; border-radius:20px; color:var(--dark); padding:11px 20px; font-family:'Poppins',sans-serif; font-size:11px; font-weight:500; cursor:pointer; }
+.mbtn-cancel:hover { border-color:#999; }
+
+@media(max-width:700px) {
+  header { padding:0 16px; }
+  .stats { padding:12px 16px; gap:20px; }
+  .cal-wrap { padding:16px; }
+  .panel { padding:16px; }
+  .dcell { min-height:60px; padding:5px; }
+  .badge { display:none; }
+  .mgrid { grid-template-columns:1fr; }
+  .prow,.prow-header { grid-template-columns:1fr 1fr 50px 28px; }
+}
+</style>
+</head>
+<body>
+
+<!-- PASSWORD -->
+<div id="spwd" class="screen on">
+  <div class="box">
+    <div class="box-logo">KUBO — COMMANDES</div>
+    <div class="box-sub">Espace de gestion</div>
+    <label>Mot de passe</label>
+    <input type="password" id="pwd" placeholder="••••••" autocomplete="off">
+    <button class="box-btn" id="btnPwd">Entrer</button>
+    <div class="box-err" id="pwdErr"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header>
+    <div class="hbrand">KUBO — COMMANDES</div>
+    <div class="hmeta" id="syncTime">—</div>
+    <div class="hbtns">
+      <button class="btn-green" id="btnNewOrder">+ Commande boutique</button>
+      <button class="btn-outline" id="btnRefresh">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Actualiser
+      </button>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-l">Commandes à venir</div><div class="stat-v" id="sUpcoming">—</div></div>
+    <div class="stat"><div class="stat-l">Cette semaine</div><div class="stat-v" id="sWeek">—</div></div>
+    <div class="stat"><div class="stat-l">CA à venir</div><div class="stat-v" id="sRevenue">—</div></div>
+    <div class="stat"><div class="stat-l">Prochain jour chargé</div><div class="stat-v" id="sBusy">—</div></div>
+  </div>
+
+  <div id="statusbar"></div>
+
+  <div class="cal-wrap">
+    <div class="cal-nav">
+      <button class="nav-btn" id="btnPrev">‹</button>
+      <div class="cal-title" id="calTitle"></div>
+      <button class="nav-btn" id="btnNext">›</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="panel" id="panel"></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal">
+  <div class="mbox">
+    <div class="mtitle">Nouvelle commande boutique</div>
+    <div class="msub" id="modalSub">—</div>
+    <div class="mgrid">
+      <div class="mfield full">
+        <label>Nom du client *</label>
+        <input type="text" id="mName" placeholder="Prénom Nom">
+      </div>
+      <div class="mfield full">
+        <label>Téléphone</label>
+        <input type="tel" id="mPhone" placeholder="06 XX XX XX XX">
+      </div>
+      <div class="mfield full">
+        <label>Produits *</label>
+        <div id="mProdList"></div>
+        <button class="btn-addp" id="btnAddProd">+ Ajouter un produit</button>
+      </div>
+      <div class="mfield">
+        <label>Prix total (€)</label>
+        <input type="number" id="mPrice" placeholder="0.00" step="0.01" min="0">
+      </div>
+      <div class="mfield">
+        <label>Jour de retrait *</label>
+        <input type="date" id="mDate">
+      </div>
+      <div class="mfield full">
+        <label>Heure de retrait</label>
+        <input type="time" id="mTime">
+      </div>
+    </div>
+    <div class="mbtns">
+      <button class="mbtn-cancel" id="btnModalCancel">Annuler</button>
+      <button class="mbtn-save" id="btnModalSave">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var PWD = 'Miniloute2016';
+var proxyUrl = '/api/orders';
+var webOrders = [];
+var boutiqueOrders = [];
+var calDate = new Date();
+var selDate = null;
+
+function boutiqueUrl() {
+  return proxyUrl.replace('/orders', '/boutique');
+}
+
+function show(id) {
+  document.getElementById('spwd').classList.remove('on');
+  document.getElementById('app').classList.remove('on');
+  if (id === 'app') {
+    document.getElementById('app').classList.add('on');
+  } else {
+    document.getElementById(id).classList.add('on');
+  }
+}
+
+function status(type, msg) {
+  var b = document.getElementById('statusbar');
+  b.className = type || '';
+  b.innerHTML = msg;
+  b.style.display = type ? 'block' : 'none';
+}
+
+function allOrders() {
+  return webOrders.map(function(o) { return Object.assign({}, o, {source:'web'}); })
+    .concat(boutiqueOrders);
+}
+
+function checkPwd() {
+  var input = document.getElementById('pwd');
+  var err = document.getElementById('pwdErr');
+  if (input.value === PWD) {
+    sessionStorage.setItem('kubo_ok', '1');
+    afterLogin();
+  } else {
+    input.classList.add('shake');
+    err.textContent = 'Mot de passe incorrect';
+    input.value = '';
+    setTimeout(function() { input.classList.remove('shake'); err.textContent = ''; }, 1500);
+  }
+}
+
+function afterLogin() {
+  show('app');
+  renderCal();
+  loadWeb();
+  loadBoutique();
+}
+
+function loadWeb() {
+  status('loading', 'Chargement des commandes...');
+  fetch(proxyUrl)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      webOrders = parseWeb(d.orders || []);
+      updateStats();
+      renderCal();
+      status('', '');
+      document.getElementById('syncTime').textContent =
+        'Sync ' + new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+    })
+    .catch(function(e) { status('error', 'Erreur : ' + e.message); });
+}
+
+function parseWeb(raw) {
+  return raw.map(function(o) {
+    var pickupDate = null;
+    var fields = o.customData || [];
+    if (Array.isArray(fields)) {
+      for (var i = 0; i < fields.length; i++) {
+        if (fields[i].textInput) { pickupDate = fields[i].textInput; break; }
+      }
+    }
+    var dateKey = null;
+    if (pickupDate) {
+      var m = pickupDate.match(/(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+      if (m) dateKey = m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');
+    }
+    var timeMatch = pickupDate ? pickupDate.match(/(\d{1,2}:\d{2})/) : null;
+    var items = (o.purchasedItems || []).map(function(it) {
+      return (it.count||1) + '\xd7 ' + (it.productName || it.variantName || 'Produit');
+    });
+    var ci = o.customerInfo || {};
+    var addr = (o.allAddresses || [])[0] || {};
+    var total = o.customerPaid && o.customerPaid.value !== undefined
+      ? (o.customerPaid.value/100).toFixed(2)+'\u20ac' : '—';
+    return {
+      id: o.orderId || o.id || '',
+      source: 'web',
+      client: ci.fullName || 'Client',
+      email: ci.email || '',
+      phone: addr.line1 || '',
+      products: items,
+      total: total,
+      dateKey: dateKey,
+      pickupTime: timeMatch ? timeMatch[1] : null,
+      status: o.status || ''
+    };
+  }).filter(function(o) { return o.dateKey; });
+}
+
+function loadBoutique() {
+  fetch(boutiqueUrl())
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      boutiqueOrders = d.orders || [];
+      updateStats();
+      renderCal();
+    })
+    .catch(function(e) { console.warn('Boutique:', e.message); });
+}
+
+function openModal(dateStr) {
+  document.getElementById('mName').value = '';
+  document.getElementById('mPhone').value = '';
+  document.getElementById('mPrice').value = '';
+  document.getElementById('mTime').value = '';
+  document.getElementById('mDate').value = dateStr || '';
+  document.getElementById('mProdList').innerHTML = '';
+  document.getElementById('modalSub').textContent = dateStr
+    ? 'Retrait : ' + new Date(dateStr+'T12:00:00').toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'})
+    : 'Nouvelle commande';
+  addProdRow();
+  document.getElementById('modal').classList.add('on');
+  setTimeout(function() { document.getElementById('mName').focus(); }, 100);
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('on');
+}
+
+function addProdRow(name, size, qty) {
+  var list = document.getElementById('mProdList');
+  if (list.querySelectorAll('.prow').length === 0) {
+    var h = document.createElement('div');
+    h.className = 'prow-header';
+    h.innerHTML = '<span>Produit</span><span>Taille</span><span>Qté</span><span></span>';
+    list.appendChild(h);
+  }
+  var row = document.createElement('div');
+  row.className = 'prow';
+  var n = document.createElement('input'); n.type='text'; n.className='p-name'; n.placeholder='Nom'; if(name) n.value=name;
+  var s = document.createElement('input'); s.type='text'; s.className='p-size'; s.placeholder='Taille'; if(size) s.value=size;
+  var q = document.createElement('input'); q.type='number'; q.className='p-qty'; q.min='1'; q.value=qty||1;
+  var del = document.createElement('button'); del.type='button'; del.className='btn-rmv'; del.textContent='\xd7';
+  del.addEventListener('click', function() {
+    row.remove();
+    if (list.querySelectorAll('.prow').length === 0) list.innerHTML = '';
+  });
+  row.appendChild(n); row.appendChild(s); row.appendChild(q); row.appendChild(del);
+  list.appendChild(row);
+}
+
+function getProds() {
+  var out = [];
+  document.querySelectorAll('#mProdList .prow').forEach(function(r) {
+    var name = r.querySelector('.p-name').value.trim();
+    if (name) out.push({ name:name, size:r.querySelector('.p-size').value.trim(), qty:parseInt(r.querySelector('.p-qty').value)||1 });
+  });
+  return out;
+}
+
+function saveModal() {
+  var name = document.getElementById('mName').value.trim();
+  var date = document.getElementById('mDate').value;
+  if (!name) { alert('Nom requis'); return; }
+  if (!date) { alert('Date requise'); return; }
+  var prods = getProds();
+  if (!prods.length) { alert('Au moins un produit requis'); return; }
+  var price = document.getElementById('mPrice').value;
+  var order = {
+    id: 'b-'+Date.now(), source:'boutique', client:name,
+    phone: document.getElementById('mPhone').value.trim(),
+    products: prods,
+    total: price ? parseFloat(price).toFixed(2)+'\u20ac' : '—',
+    dateKey: date,
+    pickupTime: document.getElementById('mTime').value || null,
+    email: '', status: ''
+  };
+  fetch(boutiqueUrl(), {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(order)})
+    .then(function() {
+      boutiqueOrders.push(order);
+      closeModal();
+      selDate = date;
+      updateStats();
+      renderCal();
+    })
+    .catch(function(e) { alert('Erreur: '+e.message); });
+}
+
+function delBoutique(id) {
+  if (!confirm('Supprimer cette commande ?')) return;
+  fetch(boutiqueUrl(), {method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:id})})
+    .then(function() {
+      boutiqueOrders = boutiqueOrders.filter(function(o) { return o.id !== id; });
+      updateStats();
+      renderCal();
+    })
+    .catch(function(e) { alert('Erreur: '+e.message); });
+}
+
+function updateStats() {
+  var today = new Date().toISOString().split('T')[0];
+  var all = allOrders();
+  var up = all.filter(function(o) { return o.dateKey >= today; });
+  var we = new Date(); we.setDate(we.getDate()+7);
+  var wk = up.filter(function(o) { return o.dateKey <= we.toISOString().split('T')[0]; });
+  var rev = up.reduce(function(a,o) {
+    var v = parseFloat(o.total.replace('\u20ac','').replace(',','.'));
+    return a+(isNaN(v)?0:v);
+  }, 0);
+  var bd = {};
+  up.forEach(function(o) { bd[o.dateKey]=(bd[o.dateKey]||0)+1; });
+  var busy = Object.entries(bd).sort(function(a,b){return b[1]-a[1];})[0];
+  document.getElementById('sUpcoming').textContent = up.length;
+  document.getElementById('sWeek').textContent = wk.length;
+  document.getElementById('sRevenue').textContent = rev.toFixed(2)+'\u20ac';
+  document.getElementById('sBusy').textContent = busy
+    ? new Date(busy[0]+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'}).toUpperCase()+' ('+busy[1]+')'
+    : '—';
+}
+
+function renderCal() {
+  var grid = document.getElementById('calGrid');
+  var yr = calDate.getFullYear();
+  var mo = calDate.getMonth();
+  document.getElementById('calTitle').textContent =
+    new Date(yr,mo).toLocaleDateString('fr-FR',{month:'long',year:'numeric'}).toUpperCase();
+
+  var byDate = {};
+  allOrders().forEach(function(o) {
+    if (!byDate[o.dateKey]) byDate[o.dateKey] = [];
+    byDate[o.dateKey].push(o);
+  });
+
+  var html = ['LUN','MAR','MER','JEU','VEN','SAM','DIM']
+    .map(function(d) { return '<div class="dhead">'+d+'</div>'; }).join('');
+
+  var dow = new Date(yr,mo,1).getDay();
+  dow = dow===0?6:dow-1;
+  var last = new Date(yr,mo+1,0).getDate();
+  var prevLast = new Date(yr,mo,0).getDate();
+  var today = new Date().toISOString().split('T')[0];
+
+  for (var i=dow-1; i>=0; i--)
+    html += '<div class="dcell other"><div class="dnum">'+(prevLast-i)+'</div></div>';
+
+  for (var d=1; d<=last; d++) {
+    var ds = yr+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var ords = byDate[ds] || [];
+    var cls = 'dcell'+(ords.length?' clickable':'')+(ds===today?' today':'')+(ds===selDate?' sel':'');
+    var badges = '';
+    if (ords.length===1) {
+      badges = '<div class="badge '+(ords[0].source||'web')+'">'+ords[0].client+'</div>';
+    } else if (ords.length>1) {
+      badges = '<div class="badge '+(ords[0].source||'web')+'">'+ords[0].client+'</div>'
+        +'<span class="dcount">+'+(ords.length-1)+'</span>';
+    }
+    html += '<div class="'+cls+'" data-d="'+ds+'">'
+      +'<div class="dnum">'+d+'</div>'
+      +badges
+      +'<span class="dplus" data-d="'+ds+'">+</span>'
+      +'</div>';
+  }
+
+  var total = dow+last;
+  var rem = Math.ceil(total/7)*7-total;
+  for (var d2=1; d2<=rem; d2++)
+    html += '<div class="dcell other"><div class="dnum">'+d2+'</div></div>';
+
+  grid.innerHTML = html;
+
+  grid.querySelectorAll('.dcell.clickable').forEach(function(c) {
+    c.addEventListener('click', function(e) {
+      if (e.target.classList.contains('dplus')) return;
+      selectDay(c.getAttribute('data-d'));
+    });
+  });
+
+  grid.querySelectorAll('.dplus').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      openModal(btn.getAttribute('data-d'));
+    });
+  });
+
+  if (selDate && byDate[selDate]) {
+    renderPanel(selDate, byDate[selDate]);
+  } else {
+    document.getElementById('panel').classList.remove('on');
+  }
+}
+
+function selectDay(ds) {
+  if (selDate===ds) { selDate=null; document.getElementById('panel').classList.remove('on'); renderCal(); return; }
+  selDate=ds; renderCal();
+  renderPanel(ds, allOrders().filter(function(o){return o.dateKey===ds;}));
+}
+
+function renderPanel(ds, ords) {
+  var panel = document.getElementById('panel');
+  var label = new Date(ds+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).toUpperCase();
+  var html = '<div class="panel-date">'+label+' — '+ords.length+' COMMANDE'+(ords.length>1?'S':'')+'</div><div class="cards">';
+  ords.forEach(function(o,i) {
+    var isB = o.source==='boutique';
+    html += '<div class="card" style="animation-delay:'+(i*.06)+'s">';
+    html += '<span class="card-src '+(isB?'boutique':'web')+'">'+(isB?'Boutique':'Site web')+'</span>';
+    html += '<div class="card-header"><div class="card-name">'+o.client+'</div><div class="card-amt">'+o.total+'</div></div>';
+    if (o.products && o.products.length) {
+      var pl = o.products.map(function(p) {
+        return typeof p==='object'
+          ? p.qty+'\xd7 '+p.name+(p.size?' ('+p.size+')':'')
+          : p;
+      }).join('<br>');
+      html += '<div class="crow"><div class="clabel">Produits</div><div class="cval">'+pl+'</div></div>';
+    }
+    if (o.pickupTime) html += '<div class="crow"><div class="clabel">Heure</div><div class="cval">'+o.pickupTime+'</div></div>';
+    if (o.email) html += '<div class="crow"><div class="clabel">Email</div><div class="cval">'+o.email+'</div></div>';
+    if (o.phone) html += '<div class="crow"><div class="clabel">Tél.</div><div class="cval">'+o.phone+'</div></div>';
+    html += '<div class="card-id">#'+o.id+'</div>';
+    if (isB) html += '<button class="btn-del" data-id="'+o.id+'">✕ Supprimer</button>';
+    html += '</div>';
+  });
+  html += '</div>';
+  panel.innerHTML = html;
+  panel.querySelectorAll('.btn-del').forEach(function(b) {
+    b.addEventListener('click', function() { delBoutique(b.getAttribute('data-id')); });
+  });
+  panel.classList.add('on');
+  setTimeout(function() { panel.scrollIntoView({behavior:'smooth',block:'nearest'}); }, 100);
+}
+
+function changeMonth(dir) {
+  selDate=null; calDate.setMonth(calDate.getMonth()+dir);
+  document.getElementById('panel').classList.remove('on');
+  renderCal();
+}
+
+// INIT
+document.getElementById('btnPwd').addEventListener('click', checkPwd);
+document.getElementById('pwd').addEventListener('keydown', function(e) { if(e.key==='Enter') checkPwd(); });
+document.getElementById('btnRefresh').addEventListener('click', loadWeb);
+document.getElementById('btnPrev').addEventListener('click', function() { changeMonth(-1); });
+document.getElementById('btnNext').addEventListener('click', function() { changeMonth(1); });
+document.getElementById('btnNewOrder').addEventListener('click', function() { openModal(null); });
+document.getElementById('btnAddProd').addEventListener('click', function() { addProdRow(); });
+document.getElementById('btnModalCancel').addEventListener('click', closeModal);
+document.getElementById('btnModalSave').addEventListener('click', saveModal);
+document.getElementById('modal').addEventListener('click', function(e) {
+  if (e.target===document.getElementById('modal')) closeModal();
+});
+
+if (sessionStorage.getItem('kubo_ok')==='1') {
+  afterLogin();
+} else {
+  show('spwd');
+  document.getElementById('pwd').focus();
+}
+</script>
+</body>
+</html>
