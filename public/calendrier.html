@@ -92,13 +92,12 @@ header { background:var(--white); padding:0 32px; height:56px; display:flex; ali
 .dcell.today .dnum { color:var(--green); font-weight:700; }
 .dcell.other .dnum { color:#BBBBCC; }
 
-/* BADGES */
-.badge { font-size:9px; font-weight:600; padding:2px 7px; border-radius:3px; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
-.badge.web { background:var(--blue-badge); color:var(--blue-text); }
-.badge.boutique { background:var(--green); color:var(--white); }
-.dcount { display:inline-flex; align-items:center; justify-content:center; background:var(--muted); color:var(--white); font-size:9px; font-weight:600; width:18px; height:18px; border-radius:50%; margin-top:2px; }
-
-/* PLUS BUTTON */
+/* ORDER DOT */
+.order-dot { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; color:white; font-size:11px; font-weight:700; margin-bottom:4px; }
+.badge-name { font-size:9px; font-weight:600; padding:2px 7px; border-radius:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
+.badge-name.web { background:var(--blue-badge); color:var(--blue-text); }
+.badge-name.boutique { background:var(--green); color:var(--white); }
+@media(max-width:768px) { .badge-name { display:none; } }
 .dplus { display:none; position:absolute; top:5px; right:5px; width:22px; height:22px; background:var(--green); color:var(--white); border-radius:50%; font-size:16px; line-height:22px; text-align:center; cursor:pointer; font-weight:300; }
 .dcell:not(.other):hover .dplus { display:block; }
 .dcell.sel .dplus { background:#555; }
@@ -509,11 +508,15 @@ function renderCal() {
     var ords = byDate[ds] || [];
     var cls = 'dcell'+(ords.length?' clickable':'')+(ds===today?' today':'')+(ds===selDate?' sel':'');
     var badges = '';
-    if (ords.length===1) {
-      badges = '<div class="badge '+(ords[0].source||'web')+'">'+ords[0].client+'</div>';
-    } else if (ords.length>1) {
-      badges = '<div class="badge '+(ords[0].source||'web')+'">'+ords[0].client+'</div>'
-        +'<span class="dcount">+'+(ords.length-1)+'</span>';
+    if (ords.length > 0) {
+      var hasWeb = ords.some(function(o) { return o.source !== 'boutique'; });
+      var hasBoutique = ords.some(function(o) { return o.source === 'boutique'; });
+      var dotColor = hasBoutique && !hasWeb ? 'var(--green)' : hasBoutique ? 'var(--green)' : 'var(--blue-text)';
+      if (hasWeb && hasBoutique) dotColor = 'var(--blue-text)';
+      badges = '<div class="order-dot" style="background:'+dotColor+'">'+ords.length+'</div>';
+      // Show name only on larger screens via CSS
+      if (ords.length === 1) badges += '<div class="badge-name '+(ords[0].source||'web')+'">'+ords[0].client+'</div>';
+      else if (ords.length > 1) badges += '<div class="badge-name '+(ords[0].source||'web')+'">'+ords[0].client+'</div>';
     }
     html += '<div class="'+cls+'" data-d="'+ds+'">'
       +'<div class="dnum">'+d+'</div>'
