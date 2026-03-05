@@ -46,21 +46,37 @@ body { background:var(--bg); color:var(--ink); font-family:'Poppins',sans-serif;
 
 /* HEADER */
 header { background:var(--white); padding:0 32px; height:56px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--card-border); }
-.hbrand { font-size:15px; font-weight:700; letter-spacing:.05em; color:var(--ink); }
+.hbrand { font-size:15px; font-weight:700; letter-spacing:.05em; color:var(--ink); white-space:nowrap; }
 .hmeta { font-size:11px; color:var(--muted); font-weight:400; }
 .hbtns { display:flex; gap:10px; align-items:center; }
 .btn-green { background:var(--green); color:var(--white); border:none; border-radius:20px; padding:8px 18px; font-family:'Poppins',sans-serif; font-size:11px; font-weight:600; letter-spacing:.05em; cursor:pointer; white-space:nowrap; }
 .btn-green:hover { background:#5CA03A; }
-.btn-outline { background:var(--white); color:var(--dark); border:1px solid #CCCCCC; border-radius:20px; padding:8px 16px; font-family:'Poppins',sans-serif; font-size:11px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:6px; }
-.btn-outline:hover { border-color:#999; }
+.btn-icon-circle { background:var(--white); color:var(--dark); border:1px solid #CCCCCC; border-radius:50%; width:36px; height:36px; min-width:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.btn-icon-circle:hover { border-color:#999; }
 .btn-icon { background:none; border:none; color:var(--muted); cursor:pointer; font-size:18px; padding:4px; display:flex; align-items:center; }
 .btn-icon:hover { color:var(--ink); }
+.btn-new-mobile { display:none; }
 
 /* STATS */
 .stats { background:var(--dark); padding:12px 32px; display:flex; gap:40px; flex-wrap:wrap; }
 .stat { display:flex; flex-direction:column; gap:3px; }
 .stat-l { font-size:9px; font-weight:500; letter-spacing:.12em; text-transform:uppercase; color:#999; }
 .stat-v { font-size:18px; font-weight:700; color:var(--white); }
+
+@media(max-width:768px) {
+  .stats { display:none; }
+  header { height:auto; padding:10px 14px; gap:8px; }
+  .hbrand { font-size:12px; white-space:pre-line; line-height:1.4; }
+  .hmeta { display:none; }
+  .hbtns { gap:8px; }
+  .btn-green { display:none; }
+  .btn-new-mobile { display:flex; align-items:center; justify-content:center; width:36px; height:36px; min-width:36px; background:var(--green); color:var(--white); border:none; border-radius:50%; font-size:22px; font-weight:300; cursor:pointer; line-height:1; padding-bottom:1px; }
+  .cal-wrap { padding:10px; }
+  .panel { padding:14px; }
+  .dcell { min-height:56px; padding:4px; }
+  .mgrid { grid-template-columns:1fr; }
+  .prow,.prow-header { grid-template-columns:1fr 1fr 50px 28px; }
+}
 
 /* STATUS */
 #statusbar { padding:10px 32px; font-size:11px; display:none; }
@@ -157,13 +173,10 @@ header { background:var(--white); padding:0 32px; height:56px; display:flex; ali
 .mbtn-cancel { background:var(--white); border:1px solid #CCCCCC; border-radius:20px; color:var(--dark); padding:11px 20px; font-family:'Poppins',sans-serif; font-size:11px; font-weight:500; cursor:pointer; }
 .mbtn-cancel:hover { border-color:#999; }
 
-@media(max-width:700px) {
-  header { padding:0 16px; }
-  .stats { padding:12px 16px; gap:20px; }
-  .cal-wrap { padding:16px; }
-  .panel { padding:16px; }
-  .dcell { min-height:60px; padding:5px; }
-  .badge { display:none; }
+@media(max-width:768px) {
+  .cal-wrap { padding:12px; }
+  .panel { padding:14px; }
+  .dcell { min-height:64px; padding:5px; }
   .mgrid { grid-template-columns:1fr; }
   .prow,.prow-header { grid-template-columns:1fr 1fr 50px 28px; }
 }
@@ -186,13 +199,13 @@ header { background:var(--white); padding:0 32px; height:56px; display:flex; ali
 <!-- APP -->
 <div id="app">
   <header>
-    <div class="hbrand">KUBO — COMMANDES</div>
+    <div class="hbrand">KUBO —&#10;COMMANDES</div>
     <div class="hmeta" id="syncTime">—</div>
     <div class="hbtns">
-      <button class="btn-green" id="btnNewOrder">+ Commande boutique</button>
-      <button class="btn-outline" id="btnRefresh">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-        Actualiser
+      <button class="btn-green" id="btnNewOrder">+ Nouvelle commande</button>
+      <button class="btn-new-mobile" id="btnNewOrderMobile">+</button>
+      <button class="btn-icon-circle" id="btnRefresh" title="Actualiser">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
       </button>
     </div>
   </header>
@@ -636,6 +649,7 @@ document.getElementById('btnRefresh').addEventListener('click', loadWeb);
 document.getElementById('btnPrev').addEventListener('click', function() { changeMonth(-1); });
 document.getElementById('btnNext').addEventListener('click', function() { changeMonth(1); });
 document.getElementById('btnNewOrder').addEventListener('click', function() { openModal(null); });
+document.getElementById('btnNewOrderMobile').addEventListener('click', function() { openModal(null); });
 document.getElementById('btnAddProd').addEventListener('click', function() { addProdRow(); });
 document.getElementById('btnModalCancel').addEventListener('click', closeModal);
 document.getElementById('btnModalSave').addEventListener('click', saveModal);
