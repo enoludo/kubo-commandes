@@ -660,6 +660,42 @@ body {
   </div>
 </div>
 
+<!-- BRUNCH MODAL -->
+<div id="modalBrunch">
+  <div class="mbox">
+    <div class="mtitle">Nouveau brunch</div>
+    <div class="msub" id="brunchModalSub">—</div>
+    <div class="mgrid">
+      <div class="mfield full">
+        <label>Nom du client *</label>
+        <input type="text" id="bName" placeholder="Prénom Nom">
+      </div>
+      <div class="mfield full">
+        <label>Téléphone</label>
+        <input type="tel" id="bPhone" placeholder="06 XX XX XX XX">
+      </div>
+      <div class="mfield">
+        <label>Nombre de personnes *</label>
+        <input type="number" id="bPersons" min="1" placeholder="2">
+      </div>
+      <div class="mfield">
+        <label>Heure *</label>
+        <select id="bTime">
+          <option value="">— Choisir —</option>
+          <option value="10:30">10h30</option>
+          <option value="12:00">12h00</option>
+          <option value="13:30">13h30</option>
+        </select>
+      </div>
+    </div>
+    <input type="hidden" id="bDate">
+    <div class="mbtns">
+      <button class="mbtn-cancel" id="btnBrunchCancel">Annuler</button>
+      <button class="mbtn-save mbtn-brunch" id="btnBrunchSave">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <script>
 var PWD = 'Miniloute2016';
 var KUBO_SECRET = '';
@@ -1193,42 +1229,6 @@ if (sessionStorage.getItem('kubo_ok') === '1') {
   document.getElementById('spwd').style.display = 'flex';
 }
 </script>
-
-<!-- BRUNCH MODAL -->
-<div id="modalBrunch">
-  <div class="mbox">
-    <div class="mtitle">Nouveau brunch</div>
-    <div class="msub" id="brunchModalSub">—</div>
-    <div class="mgrid">
-      <div class="mfield full">
-        <label>Nom du client *</label>
-        <input type="text" id="bName" placeholder="Prénom Nom">
-      </div>
-      <div class="mfield full">
-        <label>Téléphone</label>
-        <input type="tel" id="bPhone" placeholder="06 XX XX XX XX">
-      </div>
-      <div class="mfield">
-        <label>Nombre de personnes *</label>
-        <input type="number" id="bPersons" min="1" placeholder="2">
-      </div>
-      <div class="mfield">
-        <label>Heure *</label>
-        <select id="bTime">
-          <option value="">— Choisir —</option>
-          <option value="10:30">10h30</option>
-          <option value="12:00">12h00</option>
-          <option value="13:30">13h30</option>
-        </select>
-      </div>
-    </div>
-    <input type="hidden" id="bDate">
-    <div class="mbtns">
-      <button class="mbtn-cancel" id="btnBrunchCancel">Annuler</button>
-      <button class="mbtn-save mbtn-brunch" id="btnBrunchSave">Enregistrer</button>
-    </div>
-  </div>
-</div>
 
 </body>
 </html>
