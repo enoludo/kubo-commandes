@@ -855,50 +855,6 @@ function parseBrunch(raw) {
     };
   }).filter(Boolean);
 }
-    items.forEach(function(it) { if (it.variantName) variant = it.variantName; });
-
-    // Parse "Samedi 7 mars" → dateKey
-    var dateKey = null;
-    var m = variant.match(/(\d{1,2})\s+(\w+)/i);
-    if (m) {
-      var day = parseInt(m[1]);
-      var monthNum = months[m[2].toLowerCase()];
-      if (monthNum) {
-        // Utilise la date de création de la commande pour déduire l'année
-        var orderDate = o.createdOn || o.purchasedOn || o.createdAt || null;
-        var yr = new Date().getFullYear();
-        if (orderDate) {
-          var orderYear = new Date(orderDate).getFullYear();
-          var orderMonth = new Date(orderDate).getMonth() + 1;
-          // Si le mois du brunch est très éloigné du mois de commande,
-          // l'année de la commande est la bonne référence
-          yr = orderYear;
-          // Cas limite : commande en décembre pour un brunch en janvier → année suivante
-          if (orderMonth === 12 && monthNum === 1) yr = orderYear + 1;
-        }
-        dateKey = yr + '-' + String(monthNum).padStart(2,'0') + '-' + String(day).padStart(2,'0');
-      }
-    }
-    if (!dateKey) return null;
-    var ci = o.customerInfo || {};
-    var addr = (o.allAddresses||[])[0]||{};
-    var total = o.customerPaid && o.customerPaid.value !== undefined
-      ? (o.customerPaid.value/100).toFixed(2)+'€' : '—';
-    var timeMatch = variant.match(/(\d{1,2}[h:]\d{2})/i);
-    return {
-      id: o.orderId || o.id || '',
-      source: 'brunch',
-      client: ci.fullName || 'Client',
-      email: ci.email || '',
-      phone: addr.phone || '',
-      products: [{ name: 'Brunch du samedi', size: variant, qty: 1 }],
-      total: total,
-      dateKey: dateKey,
-      pickupTime: timeMatch ? timeMatch[1] : null,
-      persons: null
-    };
-  }).filter(Boolean);
-}
 
 function parseWeb(raw) {
   return raw.map(function(o) {
