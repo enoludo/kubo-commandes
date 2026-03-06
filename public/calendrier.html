@@ -812,6 +812,51 @@ function parseBrunch(raw) {
     if (!isBrunch) return null;
     items.forEach(function(it) { if (it.variantName) variant = it.variantName; });
 
+    // Extraire l'année depuis customData (champ date du checkout)
+    var checkoutYear = null;
+    var fields = o.customData || [];
+    if (Array.isArray(fields)) {
+      for (var i = 0; i < fields.length; i++) {
+        if (fields[i].textInput) {
+          var yearMatch = fields[i].textInput.match(/(\d{4})/);
+          if (yearMatch) { checkoutYear = parseInt(yearMatch[1]); break; }
+        }
+      }
+    }
+
+    // Parse "Samedi 7 mars" → dateKey
+    var dateKey = null;
+    var m = variant.match(/(\d{1,2})\s+(\w+)/i);
+    if (m) {
+      var day = parseInt(m[1]);
+      var monthNum = months[m[2].toLowerCase()];
+      if (monthNum) {
+        var yr = checkoutYear || new Date().getFullYear();
+        dateKey = yr + '-' + String(monthNum).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+      }
+    }
+    if (!dateKey) return null;
+    var ci = o.customerInfo || {};
+    var addr = (o.allAddresses||[])[0]||{};
+    var total = o.customerPaid && o.customerPaid.value !== undefined
+      ? (o.customerPaid.value/100).toFixed(2)+'€' : '—';
+    var timeMatch = variant.match(/(\d{1,2}[h:]\d{2})/i);
+    return {
+      id: o.orderId || o.id || '',
+      source: 'brunch',
+      client: ci.fullName || 'Client',
+      email: ci.email || '',
+      phone: addr.phone || '',
+      products: [{ name: 'Brunch du samedi', size: variant, qty: 1 }],
+      total: total,
+      dateKey: dateKey,
+      pickupTime: timeMatch ? timeMatch[1] : null,
+      persons: null
+    };
+  }).filter(Boolean);
+}
+    items.forEach(function(it) { if (it.variantName) variant = it.variantName; });
+
     // Parse "Samedi 7 mars" → dateKey
     var dateKey = null;
     var m = variant.match(/(\d{1,2})\s+(\w+)/i);
