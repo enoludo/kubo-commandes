@@ -444,7 +444,7 @@ body {
   /* Header */
   .cal-header { padding: 0 16px; height: 44px; }
   .hbrand { font-size: 12px; }
-  .hbtns { gap: 2px; }
+  .hbtns { gap: 8px; }
   .btn-primary {
     width: 28px; height: 28px; min-width: 28px;
     border-radius: 50%; padding: 0;
@@ -485,10 +485,10 @@ body {
   .badges-row { right: 6px; top: 2px; height: calc((100% - 6px) / 2); gap: 2px; }
 
   /* Sel bar */
-  .sel-bar { height: calc((100% - 6px) / 2); top: 2px; left: 2px; right: 2px; }
+  .sel-bar { height: calc((100% - 6px) / 2); top: 2px; left: 2px; right: 2px; border-radius: 3px; }
 
   /* Add button */
-  .btn-cell-add { height: calc((100% - 6px) / 2); bottom: 2px; left: 2px; right: 2px; font-size: 14px; }
+  .btn-cell-add { height: calc((100% - 6px) / 2); bottom: 2px; left: 2px; right: 2px; font-size: 14px; border-radius: 3px; }
 
   /* Panel */
   .panel { padding: 16px; border-radius: var(--radius); }
@@ -505,18 +505,6 @@ body {
 </head>
 <body>
 <!-- HEADER -->
-<!-- PASSWORD -->
-<div id="spwd" style="display:none;position:fixed;inset:0;background:var(--dark);align-items:center;justify-content:center;z-index:200;flex-direction:column;gap:16px;">
-  <div style="background:var(--white);border-radius:12px;padding:40px 32px;width:300px;text-align:center;">
-    <div style="font-size:16px;font-weight:700;margin-bottom:4px;">KUBO <span style="color:var(--muted);font-weight:400;">·</span> COMMANDES</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:24px;">Accès restreint</div>
-    <input type="password" id="pwd" placeholder="Mot de passe"
-      style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'Poppins',sans-serif;font-size:13px;outline:none;margin-bottom:8px;">
-    <div id="pwdErr" style="font-size:11px;color:var(--red);min-height:16px;margin-bottom:8px;"></div>
-    <button id="btnPwd" style="width:100%;background:var(--green);color:var(--white);border:none;border-radius:20px;padding:11px;font-family:'Poppins',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">Accéder</button>
-  </div>
-</div>
-
 <div id="statusbar"></div>
 
 <div class="cal-header-bar">
@@ -591,112 +579,23 @@ body {
 </div>
 
 <script>
-var PWD = 'Miniloute2016';
-var proxyUrl = '/api/orders';
-var webOrders = [];
-var boutiqueOrders = [];
-var calDate = new Date();
+// ── DEMO DATA ──
+var webOrders = [
+  { id:'w1', source:'web', client:'Ludovic Enault', email:'enoludo@hotmail.com', phone:'0615260523', products:[{name:'Tarte Agrumes Frénésie',size:'',qty:1}], total:'6.20€', dateKey:'2026-03-11', pickupTime:'15:30' },
+  { id:'w2', source:'web', client:'Marie Dupont', email:'marie@email.com', phone:'0612345678', products:[{name:'Chou Vanille',size:'Individuel',qty:2}], total:'12.40€', dateKey:'2026-03-11', pickupTime:'14:00' },
+  { id:'w3', source:'web', client:'Paul Martin', email:'paul@email.com', phone:'0698765432', products:[{name:'Tarte Mango',size:'Pour 4',qty:1}], total:'28.00€', dateKey:'2026-03-12', pickupTime:'11:00' },
+  { id:'w4', source:'web', client:'Sophie Bernard', email:'sophie@email.com', phone:'', products:[{name:'Éclair Café',size:'',qty:3}], total:'15.00€', dateKey:'2026-03-21', pickupTime:'16:00' },
+  { id:'w5', source:'web', client:'Julien Petit', email:'', phone:'0677889900', products:[{name:'Paris-Brest',size:'Pour 6',qty:1}], total:'34.00€', dateKey:'2026-03-21', pickupTime:'10:30' },
+];
+var boutiqueOrders = [
+  { id:'b1', source:'boutique', client:'Ludovic Enault', email:'', phone:'0615260523', products:[{name:'Tarte Agrumes Frénésie',size:'',qty:1}], total:'6.20€', dateKey:'2026-03-11', pickupTime:'15:30' },
+];
+
+var calDate = new Date(2026, 2, 1);
 var selDate = null;
 
-function boutiqueUrl() { return '/api/boutique'; }
-
 function allOrders() {
-  return webOrders.map(function(o) { return Object.assign({}, o, {source:'web'}); })
-    .concat(boutiqueOrders);
-}
-
-// ── AUTH ──
-var PWD_HASH = 'Miniloute2016';
-function checkPwd() {
-  var input = document.getElementById('pwd');
-  var err = document.getElementById('pwdErr');
-  if (input.value === PWD_HASH) {
-    sessionStorage.setItem('kubo_ok', '1');
-    afterLogin();
-  } else {
-    input.classList.add('shake');
-    err.textContent = 'Mot de passe incorrect';
-    input.value = '';
-    setTimeout(function() { input.classList.remove('shake'); err.textContent = ''; }, 1500);
-  }
-}
-
-function afterLogin() {
-  document.getElementById('spwd').style.display = 'none';
-  renderCal();
-  loadWeb();
-  loadBoutique();
-}
-
-// ── STATUS ──
-function status(type, msg) {
-  var b = document.getElementById('statusbar');
-  b.className = type || '';
-  b.innerHTML = msg;
-  b.style.display = type ? 'block' : 'none';
-}
-
-// ── LOAD WEB ──
-function loadWeb() {
-  status('loading', 'Chargement des commandes...');
-  fetch(proxyUrl)
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      webOrders = parseWeb(d.orders || []);
-      renderCal();
-      status('', '');
-      document.getElementById('syncTime').textContent =
-        'Sync ' + new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
-    })
-    .catch(function(e) { status('error', 'Erreur : ' + e.message); });
-}
-
-function parseWeb(raw) {
-  return raw.map(function(o) {
-    var pickupDate = null;
-    var fields = o.customData || [];
-    if (Array.isArray(fields)) {
-      for (var i = 0; i < fields.length; i++) {
-        if (fields[i].textInput) { pickupDate = fields[i].textInput; break; }
-      }
-    }
-    var dateKey = null;
-    if (pickupDate) {
-      var m = pickupDate.match(/(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
-      if (m) dateKey = m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');
-    }
-    var timeMatch = pickupDate ? pickupDate.match(/(\d{1,2}:\d{2})/) : null;
-    var items = (o.purchasedItems || []).map(function(it) {
-      return { name: it.productName || it.variantName || 'Produit', size: '', qty: it.count || 1 };
-    });
-    var ci = o.customerInfo || {};
-    var addr = (o.allAddresses || [])[0] || {};
-    var total = o.customerPaid && o.customerPaid.value !== undefined
-      ? (o.customerPaid.value/100).toFixed(2)+'€' : '—';
-    return {
-      id: o.orderId || o.id || '',
-      source: 'web',
-      client: ci.fullName || 'Client',
-      email: ci.email || '',
-      phone: addr.phone || '',
-      products: items,
-      total: total,
-      dateKey: dateKey,
-      pickupTime: timeMatch ? timeMatch[1] : null,
-      status: o.status || ''
-    };
-  }).filter(function(o) { return o.dateKey; });
-}
-
-// ── LOAD BOUTIQUE ──
-function loadBoutique() {
-  fetch(boutiqueUrl())
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      boutiqueOrders = d.orders || [];
-      renderCal();
-    })
-    .catch(function(e) { console.warn('Boutique:', e.message); });
+  return webOrders.concat(boutiqueOrders);
 }
 
 // ── STATS ──
@@ -786,16 +685,20 @@ function renderCal() {
   var isMobile = window.innerWidth <= 768;
 
   // Click on cell
-  grid.querySelectorAll('.dcell:not(.other):not(.past)').forEach(function(c) {
+  grid.querySelectorAll('.dcell:not(.other)').forEach(function(c) {
     c.addEventListener('click', function(e) {
       if (e.target.classList.contains('btn-cell-add')) return;
       var ds2 = c.getAttribute('data-d');
       if (!ds2) return;
       var dayOrds = byDate[ds2] || [];
+      var isPast = ds2 < today;
+
+      // Case passée sans commande → rien
+      if (isPast && !dayOrds.length) return;
 
       if (isMobile) {
-        // Case vide : 1er tap = montre btn+, 2e tap = ouvre modal
-        if (!dayOrds.length) {
+        // Case vide future : 1er tap = montre btn+, 2e tap = ouvre modal
+        if (!dayOrds.length && !isPast) {
           if (c.classList.contains('add-ready')) {
             c.classList.remove('add-ready');
             openModal(ds2);
@@ -805,7 +708,7 @@ function renderCal() {
           }
           return;
         }
-        // Case avec commandes : tap = sélection + cartouche + panel
+        // Case avec commandes (passée ou future) : tap = panel
         if (selDate === ds2) {
           selDate = null;
           document.getElementById('panel').classList.remove('on');
@@ -889,14 +792,10 @@ function renderPanel(ds, ords) {
   panel.querySelectorAll('.btn-del').forEach(function(b) {
     b.addEventListener('click', function() {
       if (!confirm('Supprimer cette commande ?')) return;
-      fetch(boutiqueUrl(), {method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id: b.getAttribute('data-id')})})
-        .then(function() {
-          boutiqueOrders = boutiqueOrders.filter(function(o) { return o.id !== b.getAttribute('data-id'); });
-          selDate = null;
-          panel.classList.remove('on');
-          renderCal();
-        })
-        .catch(function(e) { alert('Erreur: '+e.message); });
+      boutiqueOrders = boutiqueOrders.filter(function(o) { return o.id !== b.getAttribute('data-id'); });
+      selDate = null;
+      panel.classList.remove('on');
+      renderCal();
     });
   });
   panel.classList.add('on');
@@ -967,25 +866,21 @@ function saveModal() {
   if (!prods.length) { alert('Au moins un produit requis'); return; }
   var price = document.getElementById('mPrice').value;
   var order = {
-    id: 'b-'+Date.now(), source:'boutique', client:name,
+    id: 'b-' + Date.now(), source: 'boutique', client: name,
     phone: document.getElementById('mPhone').value.trim(),
     products: prods,
-    total: price ? parseFloat(price).toFixed(2)+'€' : '—',
+    total: price ? parseFloat(price).toFixed(2) + '€' : '—',
     dateKey: date,
     pickupTime: document.getElementById('mTime').value || null,
     email: '', status: ''
   };
-  fetch(boutiqueUrl(), {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(order)})
-    .then(function() {
-      boutiqueOrders.push(order);
-      closeModal();
-      selDate = date;
-      renderCal();
-      var byDate = {};
-      allOrders().forEach(function(o) { if (!byDate[o.dateKey]) byDate[o.dateKey]=[]; byDate[o.dateKey].push(o); });
-      if (byDate[date]) renderPanel(date, byDate[date]);
-    })
-    .catch(function(e) { alert('Erreur: '+e.message); });
+  boutiqueOrders.push(order);
+  closeModal();
+  selDate = date;
+  renderCal();
+  var byDate = {};
+  allOrders().forEach(function(o) { if (!byDate[o.dateKey]) byDate[o.dateKey]=[]; byDate[o.dateKey].push(o); });
+  renderPanel(date, byDate[date]);
 }
 
 // ── EVENTS ──
@@ -995,8 +890,7 @@ document.getElementById('btnNewOrder').addEventListener('click', function() { op
 document.getElementById('btnRefresh').addEventListener('click', function() {
   var btn = document.getElementById('btnRefresh');
   btn.style.opacity = '.5';
-  loadWeb();
-  setTimeout(function() { btn.style.opacity = '1'; }, 600);
+  setTimeout(function() { btn.style.opacity = '1'; renderCal(); }, 600);
 });
 document.getElementById('btnAddProd').addEventListener('click', function() { addProdRow(); });
 document.getElementById('btnModalCancel').addEventListener('click', closeModal);
@@ -1004,14 +898,8 @@ document.getElementById('btnModalSave').addEventListener('click', saveModal);
 document.getElementById('modal').addEventListener('click', function(e) {
   if (e.target === document.getElementById('modal')) closeModal();
 });
-document.getElementById('btnPwd').addEventListener('click', checkPwd);
-document.getElementById('pwd').addEventListener('keydown', function(e) { if(e.key==='Enter') checkPwd(); });
 
-if (sessionStorage.getItem('kubo_ok') === '1') {
-  afterLogin();
-} else {
-  document.getElementById('spwd').style.display = 'flex';
-}
+renderCal();
 </script>
 
 </body>
