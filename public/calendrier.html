@@ -706,7 +706,7 @@ function parseWeb(raw) {
     }
     var timeMatch = pickupDate ? pickupDate.match(/(\d{1,2}:\d{2})/) : null;
     var items = (o.purchasedItems || []).map(function(it) {
-      return { name: it.productName || it.variantName || 'Produit', size: '', qty: it.count || 1 };
+      return { name: it.productName || 'Produit', size: it.variantName || '', qty: it.count || 1 };
     });
     var ci = o.customerInfo || {};
     var addr = (o.allAddresses || [])[0] || {};
