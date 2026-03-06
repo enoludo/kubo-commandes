@@ -666,6 +666,7 @@ var KUBO_SECRET = '';
 var proxyUrl = '/api/orders';
 var webOrders = [];
 var boutiqueOrders = [];
+var brunchOrders = [];
 var calDate = new Date();
 var selDate = null;
 
@@ -673,7 +674,8 @@ function boutiqueUrl() { return '/api/boutique'; }
 
 function allOrders() {
   return webOrders.map(function(o) { return Object.assign({}, o, {source:'web'}); })
-    .concat(boutiqueOrders);
+    .concat(boutiqueOrders)
+    .concat(brunchOrders);
 }
 
 // ── AUTH ──
@@ -717,7 +719,7 @@ function loadWeb() {
       var allParsed = parseWeb(d.orders || []);
       var brunchParsed = parseBrunch(d.orders || []);
       webOrders = allParsed;
-      boutiqueOrders = boutiqueOrders.filter(function(o){ return o.source !== 'brunch'; }).concat(brunchParsed);
+      brunchOrders = brunchParsed;
       renderCal();
       status('', '');
       document.getElementById('syncTime').textContent =
