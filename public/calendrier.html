@@ -697,7 +697,6 @@ body {
 </div>
 
 <script>
-var PWD = 'Miniloute2016';
 var KUBO_SECRET = '';
 var proxyUrl = '/api/orders';
 var webOrders = [];
@@ -718,20 +717,36 @@ function allOrders() {
 function checkPwd() {
   var input = document.getElementById('pwd');
   var err = document.getElementById('pwdErr');
-  if (input.value === PWD) {
+  var pwd = input.value.trim();
+  if (!pwd) return;
+
+  fetch('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: pwd })
+  })
+  .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+  .then(function(res) {
+    if (!res.ok) {
+      input.classList.add('shake');
+      err.textContent = 'Mot de passe incorrect';
+      input.value = '';
+      setTimeout(function() { input.classList.remove('shake'); err.textContent = ''; }, 1500);
+      return;
+    }
+    KUBO_SECRET = res.data.token;
     sessionStorage.setItem('kubo_ok', '1');
+    sessionStorage.setItem('kubo_secret', KUBO_SECRET);
     afterLogin();
-  } else {
-    input.classList.add('shake');
-    err.textContent = 'Mot de passe incorrect';
-    input.value = '';
-    setTimeout(function() { input.classList.remove('shake'); err.textContent = ''; }, 1500);
-  }
+  })
+  .catch(function() {
+    err.textContent = 'Erreur réseau, réessayez';
+    setTimeout(function() { err.textContent = ''; }, 2000);
+  });
 }
 
 function afterLogin() {
-  KUBO_SECRET = document.getElementById('pwd') ? document.getElementById('pwd').value : sessionStorage.getItem('kubo_secret') || '';
-  sessionStorage.setItem('kubo_secret', KUBO_SECRET);
+  KUBO_SECRET = KUBO_SECRET || sessionStorage.getItem('kubo_secret') || '';
   document.getElementById('spwd').style.display = 'none';
   renderCal();
   loadWeb();
