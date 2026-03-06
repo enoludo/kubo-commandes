@@ -402,6 +402,21 @@ body {
 
 .card-id { font-size: 9px; color: #CCC; margin-top: 8px; }
 
+/* Paid toggle */
+.card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0; }
+.btn-paid {
+  display: flex; align-items: center; gap: 5px;
+  border: none; background: none; cursor: pointer;
+  font-family: 'Poppins', sans-serif; font-size: 10px; font-weight: 600;
+  letter-spacing: .04em; padding: 4px 8px; border-radius: 12px;
+  transition: background .15s, color .15s;
+}
+.btn-paid.unpaid { color: #BBB; background: #F5F5F5; }
+.btn-paid.unpaid:hover { background: #EEE; }
+.btn-paid.paid-boutique { color: var(--green); background: var(--green-light); }
+.btn-paid.paid-brunch { color: var(--orange); background: var(--orange-light); }
+.btn-paid svg { width: 12px; height: 12px; flex-shrink: 0; }
+
 .btn-del {
   background: none; border: none;
   color: var(--red);
@@ -652,6 +667,10 @@ body {
         <label>Heure de retrait</label>
         <input type="time" id="mTime">
       </div>
+      <div class="mfield full" style="display:flex;align-items:center;gap:10px;">
+        <input type="checkbox" id="mPaid" style="width:16px;height:16px;accent-color:var(--green);cursor:pointer;">
+        <label for="mPaid" style="margin-bottom:0;cursor:pointer;text-transform:none;font-size:13px;font-weight:500;color:var(--ink);letter-spacing:0;">Commande payée</label>
+      </div>
     </div>
     <div class="mbtns">
       <button class="mbtn-cancel" id="btnModalCancel">Annuler</button>
@@ -686,6 +705,10 @@ body {
           <option value="12:00">12h00</option>
           <option value="13:30">13h30</option>
         </select>
+      </div>
+      <div class="mfield full" style="display:flex;align-items:center;gap:10px;">
+        <input type="checkbox" id="bPaid" style="width:16px;height:16px;accent-color:var(--orange);cursor:pointer;">
+        <label for="bPaid" style="margin-bottom:0;cursor:pointer;text-transform:none;font-size:13px;font-weight:500;color:var(--ink);letter-spacing:0;">Brunch payé</label>
       </div>
     </div>
     <input type="hidden" id="bDate">
@@ -1034,10 +1057,19 @@ function renderPanel(ds, ords) {
   ords.forEach(function(o, i) {
     var isB = o.source === 'boutique';
     var isBrunch = o.source === 'brunch';
+    var canToggle = isB || isBrunch;
     var badgeLabel = isB ? 'Boutique' : isBrunch ? 'Brunch' : 'Site web';
     var badgeClass = isB ? 'boutique' : isBrunch ? 'brunch' : 'web';
-    html += '<div class="card" style="animation-delay:' + (i * .07) + 's">';
+    var paidClass = o.paid ? (isBrunch ? 'paid-brunch' : 'paid-boutique') : 'unpaid';
+    var paidIcon = o.paid
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+
+    html += '<div class="card" data-id="' + o.id + '" style="animation-delay:' + (i * .07) + 's">';
+    html += '<div class="card-top">';
     html += '<span class="card-badge ' + badgeClass + '">' + badgeLabel + '</span>';
+    if (canToggle) html += '<button class="btn-paid ' + paidClass + '" data-id="' + o.id + '" data-paid="' + (o.paid ? '1' : '0') + '" data-source="' + o.source + '">' + paidIcon + (o.paid ? 'Payé' : 'Non payé') + '</button>';
+    html += '</div>';
     html += '<div class="card-header"><div class="card-name">' + o.client + '</div><div class="card-amt">' + o.total + '</div></div>';
     if (o.products && o.products.length) {
       var pl = o.products.map(function(p) {
@@ -1050,7 +1082,7 @@ function renderPanel(ds, ords) {
     if (o.email) html += '<div class="crow"><div class="clabel">Email</div><div class="cval">' + o.email + '</div></div>';
     if (o.phone) html += '<div class="crow"><div class="clabel">Tél.</div><div class="cval">' + o.phone + '</div></div>';
     html += '<div class="card-id">#' + o.id + '</div>';
-    if (isB || isBrunch) html += '<button class="btn-del" data-id="' + o.id + '">Supprimer</button>';
+    if (canToggle) html += '<button class="btn-del" data-id="' + o.id + '">Supprimer</button>';
     html += '</div>';
   });
 
@@ -1081,7 +1113,29 @@ function renderPanel(ds, ords) {
         .catch(function(e) { alert('Erreur: ' + e.message); });
     });
   });
-  panel.classList.add('on');
+  panel.querySelectorAll('.btn-paid').forEach(function(b) {
+    b.addEventListener('click', function() {
+      var id = b.getAttribute('data-id');
+      var newPaid = b.getAttribute('data-paid') !== '1';
+      var source = b.getAttribute('data-source');
+      fetch(boutiqueUrl(), {method:'PATCH', headers:{'Content-Type':'application/json','x-kubo-secret':KUBO_SECRET}, body:JSON.stringify({id:id, paid:newPaid})})
+        .then(function(r) { if (!r.ok) throw new Error('Erreur ' + r.status); return r.json(); })
+        .then(function() {
+          // Update in local arrays
+          [boutiqueOrders, brunchOrders].forEach(function(arr) {
+            arr.forEach(function(o) { if (o.id === id) o.paid = newPaid; });
+          });
+          // Re-render button in place
+          b.setAttribute('data-paid', newPaid ? '1' : '0');
+          var paidIcon = newPaid
+            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>'
+            : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+          b.innerHTML = paidIcon + (newPaid ? 'Payé' : 'Non payé');
+          b.className = 'btn-paid ' + (newPaid ? (source === 'brunch' ? 'paid-brunch' : 'paid-boutique') : 'unpaid');
+        })
+        .catch(function(e) { alert('Erreur: ' + e.message); });
+    });
+  });
   setTimeout(function() { panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 100);
 }
 
@@ -1099,6 +1153,7 @@ function openModal(dateStr) {
   document.getElementById('mPrice').value = '';
   document.getElementById('mTime').value = '';
   document.getElementById('mDate').value = dateStr || '';
+  document.getElementById('mPaid').checked = false;
   document.getElementById('mProdList').innerHTML = '';
   document.getElementById('modalSub').textContent = dateStr
     ? 'Retrait : ' + new Date(dateStr + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'})
@@ -1155,6 +1210,7 @@ function saveModal() {
     total: price ? parseFloat(price).toFixed(2) + '€' : '—',
     dateKey: date,
     pickupTime: document.getElementById('mTime').value || null,
+    paid: document.getElementById('mPaid').checked,
     email: '', status: ''
   };
   fetch(boutiqueUrl(), {method:'POST', headers:{'Content-Type':'application/json', 'x-kubo-secret': KUBO_SECRET}, body:JSON.stringify(order)})
@@ -1206,6 +1262,7 @@ function openBrunchModal(dateStr) {
   document.getElementById('bPhone').value = '';
   document.getElementById('bPersons').value = '';
   document.getElementById('bTime').value = '';
+  document.getElementById('bPaid').checked = false;
   document.getElementById('bDate').value = dateStr || '';
   var sub = dateStr ? new Date(dateStr + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'}) : '';
   document.getElementById('brunchModalSub').textContent = sub ? sub.charAt(0).toUpperCase() + sub.slice(1) : '—';
@@ -1230,7 +1287,9 @@ function saveBrunchModal() {
     phone: document.getElementById('bPhone').value.trim(),
     persons: parseInt(persons),
     products: [{ name: 'Brunch du samedi', size: '', qty: parseInt(persons) }],
-    total: '—', dateKey: date, pickupTime: time, email: ''
+    total: '—', dateKey: date, pickupTime: time,
+    paid: document.getElementById('bPaid').checked,
+    email: ''
   };
   fetch(boutiqueUrl(), {method:'POST', headers:{'Content-Type':'application/json','x-kubo-secret':KUBO_SECRET}, body:JSON.stringify(order)})
     .then(function(r) {

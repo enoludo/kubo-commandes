@@ -60,12 +60,11 @@ function sheetsReq(method, path, token, body) {
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-kubo-secret');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,PATCH,OPTIONS');
 
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
 
-  // Vérification du secret pour toutes les opérations d'écriture
-  if (req.method === 'POST' || req.method === 'DELETE') {
+  if (req.method === 'POST' || req.method === 'DELETE' || req.method === 'PATCH') {
     const provided = req.headers['x-kubo-secret'];
     if (!SECRET || provided !== SECRET) {
       res.status(401).json({ error: 'Non autorisé' });
@@ -75,7 +74,7 @@ export default async function handler(req, res) {
 
   try {
     const token = await getAccessToken();
-    const range = encodeURIComponent('Feuille 1!A:H');
+    const range = encodeURIComponent('Feuille 1!A:I');
 
     if (req.method === 'GET') {
       const data = await sheetsReq('GET', `/v4/spreadsheets/${SHEET_ID}/values/${range}`, token);
@@ -83,7 +82,9 @@ export default async function handler(req, res) {
       const orders = rows.slice(1).map(row => ({
         id: row[0]||'', client: row[1]||'', phone: row[2]||'',
         total: row[3]||'—', dateKey: row[4]||'', pickupTime: row[5]||null,
-        products: row[6] ? JSON.parse(row[6]) : [], source: 'boutique'
+        products: row[6] ? JSON.parse(row[6]) : [],
+        source: row[7] || 'boutique',
+        paid: row[8] === 'true'
       })).filter(o => o.dateKey);
       res.status(200).json({ orders });
       return;
@@ -91,10 +92,26 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       const o = req.body;
-      const row = [o.id, o.client, o.phone||'', o.total||'—', o.dateKey, o.pickupTime||'', JSON.stringify(o.products||[])];
+      const row = [o.id, o.client, o.phone||'', o.total||'—', o.dateKey, o.pickupTime||'', JSON.stringify(o.products||[]), o.source||'boutique', o.paid ? 'true' : 'false'];
       await sheetsReq('POST',
         `/v4/spreadsheets/${SHEET_ID}/values/${range}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
         token, { values: [row] }
+      );
+      res.status(200).json({ ok: true });
+      return;
+    }
+
+    if (req.method === 'PATCH') {
+      // Toggle paid status
+      const { id, paid } = req.body;
+      const data = await sheetsReq('GET', `/v4/spreadsheets/${SHEET_ID}/values/${range}`, token);
+      const rows = data.values || [];
+      const rowIndex = rows.findIndex((r, i) => i > 0 && r[0] === id);
+      if (rowIndex === -1) { res.status(404).json({ error: 'Not found' }); return; }
+      const paidRange = encodeURIComponent(`Feuille 1!I${rowIndex + 1}`);
+      await sheetsReq('PUT',
+        `/v4/spreadsheets/${SHEET_ID}/values/${paidRange}?valueInputOption=RAW`,
+        token, { values: [[paid ? 'true' : 'false']] }
       );
       res.status(200).json({ ok: true });
       return;
