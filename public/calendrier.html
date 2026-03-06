@@ -1136,6 +1136,7 @@ function renderPanel(ds, ords) {
         .catch(function(e) { alert('Erreur: ' + e.message); });
     });
   });
+  panel.classList.add('on');
   setTimeout(function() { panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 100);
 }
 
