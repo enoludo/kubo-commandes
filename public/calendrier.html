@@ -812,27 +812,30 @@ function parseBrunch(raw) {
     if (!isBrunch) return null;
     items.forEach(function(it) { if (it.variantName) variant = it.variantName; });
 
-    // Extraire l'année depuis customData (champ date du checkout)
-    var checkoutYear = null;
-    var fields = o.customData || [];
-    if (Array.isArray(fields)) {
-      for (var i = 0; i < fields.length; i++) {
-        if (fields[i].textInput) {
-          var yearMatch = fields[i].textInput.match(/(\d{4})/);
-          if (yearMatch) { checkoutYear = parseInt(yearMatch[1]); break; }
-        }
-      }
-    }
-
-    // Parse "Samedi 7 mars" → dateKey
+    // Extraire l'année : on cherche le prochain samedi futur correspondant au jour/mois
     var dateKey = null;
     var m = variant.match(/(\d{1,2})\s+(\w+)/i);
     if (m) {
       var day = parseInt(m[1]);
       var monthNum = months[m[2].toLowerCase()];
       if (monthNum) {
-        var yr = checkoutYear || new Date().getFullYear();
-        dateKey = yr + '-' + String(monthNum).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+        var today = new Date();
+        today.setHours(0,0,0,0);
+        // Essayer cette année, puis l'année suivante
+        var found = false;
+        for (var yearOffset = 0; yearOffset <= 1 && !found; yearOffset++) {
+          var yr = today.getFullYear() + yearOffset;
+          var candidate = new Date(yr, monthNum - 1, day, 12, 0, 0);
+          if (candidate >= today) {
+            dateKey = yr + '-' + String(monthNum).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+            found = true;
+          }
+        }
+        // Si toujours pas trouvé (date très passée), on prend quand même avec l'année courante
+        if (!dateKey) {
+          var yr = today.getFullYear();
+          dateKey = yr + '-' + String(monthNum).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+        }
       }
     }
     if (!dateKey) return null;
