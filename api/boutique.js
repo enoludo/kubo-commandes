@@ -3,6 +3,7 @@ const https = require('https');
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
 const SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 const PRIVATE_KEY = (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
+const SECRET = process.env.KUBO_SECRET;
 
 function base64url(str) {
   return Buffer.from(str).toString('base64')
@@ -58,10 +59,19 @@ function sheetsReq(method, path, token, body) {
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-kubo-secret');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
 
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
+
+  // Vérification du secret pour toutes les opérations d'écriture
+  if (req.method === 'POST' || req.method === 'DELETE') {
+    const provided = req.headers['x-kubo-secret'];
+    if (!SECRET || provided !== SECRET) {
+      res.status(401).json({ error: 'Non autorisé' });
+      return;
+    }
+  }
 
   try {
     const token = await getAccessToken();

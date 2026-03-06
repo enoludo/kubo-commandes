@@ -614,6 +614,7 @@ body {
 
 <script>
 var PWD = 'Miniloute2016';
+var KUBO_SECRET = '';
 var proxyUrl = '/api/orders';
 var webOrders = [];
 var boutiqueOrders = [];
@@ -643,6 +644,8 @@ function checkPwd() {
 }
 
 function afterLogin() {
+  KUBO_SECRET = document.getElementById('pwd') ? document.getElementById('pwd').value : sessionStorage.getItem('kubo_secret') || '';
+  sessionStorage.setItem('kubo_secret', KUBO_SECRET);
   document.getElementById('spwd').style.display = 'none';
   renderCal();
   loadWeb();
@@ -921,7 +924,7 @@ function renderPanel(ds, ords) {
     b.addEventListener('click', function() {
       if (!confirm('Supprimer cette commande ?')) return;
       var id = b.getAttribute('data-id');
-      fetch(boutiqueUrl(), {method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:id})})
+      fetch(boutiqueUrl(), {method:'DELETE', headers:{'Content-Type':'application/json', 'x-kubo-secret': KUBO_SECRET}, body:JSON.stringify({id:id})})
         .then(function() {
           boutiqueOrders = boutiqueOrders.filter(function(o) { return o.id !== id; });
           selDate = null;
@@ -1007,7 +1010,7 @@ function saveModal() {
     pickupTime: document.getElementById('mTime').value || null,
     email: '', status: ''
   };
-  fetch(boutiqueUrl(), {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(order)})
+  fetch(boutiqueUrl(), {method:'POST', headers:{'Content-Type':'application/json', 'x-kubo-secret': KUBO_SECRET}, body:JSON.stringify(order)})
     .then(function() {
       boutiqueOrders.push(order);
       closeModal();
@@ -1041,6 +1044,7 @@ document.getElementById('btnPwd').addEventListener('click', checkPwd);
 document.getElementById('pwd').addEventListener('keydown', function(e) { if(e.key==='Enter') checkPwd(); });
 
 if (sessionStorage.getItem('kubo_ok') === '1') {
+  KUBO_SECRET = sessionStorage.getItem('kubo_secret') || '';
   afterLogin();
 } else {
   document.getElementById('spwd').style.display = 'flex';
