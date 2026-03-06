@@ -27,6 +27,10 @@
   --blue-light: #EEF2FC;
   --blue-text: #4A6FD4;
   --red: #E05555;
+  --orange: #F5A623;
+  --orange-hover: #E09510;
+  --orange-light: #FEF3E2;
+  --orange-text: #B86E00;
   --shadow: 0 2px 8px rgba(0,0,0,.08);
   --shadow-md: 0 4px 16px rgba(0,0,0,.10);
   --radius: 8px;
@@ -219,6 +223,7 @@ body {
 .dot:hover { transform: scale(1.1); }
 .dot.web { background: var(--blue-badge); }
 .dot.boutique { background: var(--green-badge); }
+.dot.brunch { background: var(--orange); }
 
 /* Selection bar — full cell */
 .sel-bar {
@@ -374,6 +379,7 @@ body {
 }
 .card-badge.web { background: var(--blue-light); color: var(--blue-text); }
 .card-badge.boutique { background: var(--green-light); color: #2A8A52; }
+.card-badge.brunch { background: var(--orange-light); color: var(--orange-text); }
 
 .card-header {
   display: flex;
@@ -416,6 +422,29 @@ body {
   backdrop-filter: blur(2px);
 }
 #modal.on { display: flex; }
+
+#modalBrunch {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.45);
+  display: none; align-items: center; justify-content: center;
+  z-index: 200;
+  backdrop-filter: blur(2px);
+}
+#modalBrunch.on { display: flex; }
+
+/* Select — same style as inputs */
+.mfield select {
+  width: 100%; background: #F8F8F8;
+  border: 1.5px solid var(--border);
+  border-radius: 6px; padding: 9px 12px;
+  font-family: 'Poppins', sans-serif; font-size: 13px; color: var(--ink); outline: none;
+  transition: border-color .15s; appearance: none;
+}
+.mfield select:focus { border-color: var(--orange); background: var(--white); }
+
+/* Orange save button */
+.mbtn-brunch { background: var(--orange) !important; }
+.mbtn-brunch:hover { background: var(--orange-hover) !important; }
 
 .mbox {
   background: var(--white);
@@ -523,6 +552,10 @@ body {
 
   /* Dots — responsive size */
   .dot { width: min(24px, calc((100% - 16px) / 2)); height: min(24px, calc((100% - 16px) / 2)); font-size: min(11px, 2.5vw); }
+
+  /* 3 pastilles : chevauchement adaptatif */
+  .badges-row.count-3 { gap: 0; }
+  .badges-row.count-3 .dot:not(:first-child) { margin-left: max(-8px, min(-2px, calc(-1.5vw))); }
 
   /* Sel bar — smaller radius on mobile */
   .sel-bar { border-radius: 3px; }
@@ -681,13 +714,57 @@ function loadWeb() {
   fetch(proxyUrl)
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      webOrders = parseWeb(d.orders || []);
+      var allParsed = parseWeb(d.orders || []);
+      var brunchParsed = parseBrunch(d.orders || []);
+      webOrders = allParsed;
+      boutiqueOrders = boutiqueOrders.filter(function(o){ return o.source !== 'brunch'; }).concat(brunchParsed);
       renderCal();
       status('', '');
       document.getElementById('syncTime').textContent =
         'Sync ' + new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
     })
     .catch(function(e) { status('error', 'Erreur : ' + e.message); });
+}
+
+
+function parseBrunch(raw) {
+  var months = {janvier:1,février:2,mars:3,avril:4,mai:5,juin:6,juillet:7,août:8,septembre:9,octobre:10,novembre:11,décembre:12};
+  return raw.map(function(o) {
+    var variant = '';
+    var items = (o.purchasedItems || []);
+    var isBrunch = items.some(function(it){ return (it.productName||'').toLowerCase().indexOf('brunch') !== -1; });
+    if (!isBrunch) return null;
+    items.forEach(function(it) { if (it.variantName) variant = it.variantName; });
+    // Parse "Samedi 7 mars" → dateKey
+    var dateKey = null;
+    var m = variant.match(/(\d{1,2})\s+(\w+)/i);
+    if (m) {
+      var day = parseInt(m[1]);
+      var monthNum = months[m[2].toLowerCase()];
+      if (monthNum) {
+        var yr = new Date().getFullYear();
+        dateKey = yr + '-' + String(monthNum).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+      }
+    }
+    if (!dateKey) return null;
+    var ci = o.customerInfo || {};
+    var addr = (o.allAddresses||[])[0]||{};
+    var total = o.customerPaid && o.customerPaid.value !== undefined
+      ? (o.customerPaid.value/100).toFixed(2)+'€' : '—';
+    var timeMatch = variant.match(/(\d{1,2}[h:]\d{2})/i);
+    return {
+      id: o.orderId || o.id || '',
+      source: 'brunch',
+      client: ci.fullName || 'Client',
+      email: ci.email || '',
+      phone: addr.phone || '',
+      products: [{ name: 'Brunch du samedi', size: variant, qty: 1 }],
+      total: total,
+      dateKey: dateKey,
+      pickupTime: timeMatch ? timeMatch[1] : null,
+      persons: null
+    };
+  }).filter(Boolean);
 }
 
 function parseWeb(raw) {
@@ -724,7 +801,7 @@ function parseWeb(raw) {
       pickupTime: timeMatch ? timeMatch[1] : null,
       status: o.status || ''
     };
-  }).filter(function(o) { return o.dateKey; });
+  }).filter(function(o) { return o.dateKey && !(o.products && o.products[0] && (o.products[0].name||'').toLowerCase().indexOf('brunch') !== -1); });
 }
 
 // ── LOAD BOUTIQUE ──
@@ -784,24 +861,14 @@ function renderCal() {
 
     var dotsHtml = '';
     if (ords.length) {
-      dotsHtml = '<div class="badges-row">';
-      ords.forEach(function(o) {
-        dotsHtml += '<div class="dot ' + (o.source === 'boutique' ? 'boutique' : 'web') + '">1</div>';
-      });
-      if (ords.length > 1) {
-        // rebuild with counts
-        var webCount = ords.filter(function(o){return o.source==='web';}).length;
-        var boutCount = ords.filter(function(o){return o.source==='boutique';}).length;
-        dotsHtml = '<div class="badges-row">';
-        if (webCount) dotsHtml += '<div class="dot web">' + webCount + '</div>';
-        if (boutCount) dotsHtml += '<div class="dot boutique">' + boutCount + '</div>';
-      } else {
-        var webCount2 = ords.filter(function(o){return o.source==='web';}).length;
-        var boutCount2 = ords.filter(function(o){return o.source==='boutique';}).length;
-        dotsHtml = '<div class="badges-row">';
-        if (webCount2) dotsHtml += '<div class="dot web">' + webCount2 + '</div>';
-        if (boutCount2) dotsHtml += '<div class="dot boutique">' + boutCount2 + '</div>';
-      }
+      var webCount  = ords.filter(function(o){ return o.source === 'web'; }).length;
+      var boutCount = ords.filter(function(o){ return o.source === 'boutique'; }).length;
+      var brunchCount = ords.filter(function(o){ return o.source === 'brunch'; }).length;
+      var dotCount = (webCount ? 1 : 0) + (boutCount ? 1 : 0) + (brunchCount ? 1 : 0);
+      dotsHtml = '<div class="badges-row' + (dotCount === 3 ? ' count-3' : '') + '">';
+      if (webCount)    dotsHtml += '<div class="dot web">'     + webCount    + '</div>';
+      if (boutCount)   dotsHtml += '<div class="dot boutique">'+ boutCount   + '</div>';
+      if (brunchCount) dotsHtml += '<div class="dot brunch">'  + brunchCount + '</div>';
       dotsHtml += '</div>';
     }
 
@@ -898,9 +965,14 @@ function renderPanel(ds, ords) {
   label = label.charAt(0).toUpperCase() + label.slice(1);
 
   var showAddBtn = !isPast;
+  var isSaturday = new Date(ds + 'T12:00:00').getDay() === 6;
+
   var panelHeader = '<div class="panel-header">'
     + '<div class="panel-date">' + label + (ords.length ? ' — ' + ords.length + ' commande' + (ords.length > 1 ? 's' : '') : '') + '</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">'
     + (showAddBtn ? '<button class="btn-panel-add" id="btnPanelAdd">+ Nouvelle commande</button>' : '')
+    + (showAddBtn && isSaturday ? '<button class="btn-panel-add" id="btnPanelBrunch" style="background:var(--orange);">+ Nouveau brunch</button>' : '')
+    + '</div>'
     + '</div>';
 
   var html = panelHeader;
@@ -908,8 +980,11 @@ function renderPanel(ds, ords) {
 
   ords.forEach(function(o, i) {
     var isB = o.source === 'boutique';
+    var isBrunch = o.source === 'brunch';
+    var badgeLabel = isB ? 'Boutique' : isBrunch ? 'Brunch' : 'Site web';
+    var badgeClass = isB ? 'boutique' : isBrunch ? 'brunch' : 'web';
     html += '<div class="card" style="animation-delay:' + (i * .07) + 's">';
-    html += '<span class="card-badge ' + (isB ? 'boutique' : 'web') + '">' + (isB ? 'Boutique' : 'Site web') + '</span>';
+    html += '<span class="card-badge ' + badgeClass + '">' + badgeLabel + '</span>';
     html += '<div class="card-header"><div class="card-name">' + o.client + '</div><div class="card-amt">' + o.total + '</div></div>';
     if (o.products && o.products.length) {
       var pl = o.products.map(function(p) {
@@ -917,11 +992,12 @@ function renderPanel(ds, ords) {
       }).join('<br>');
       html += '<div class="crow"><div class="clabel">Produits</div><div class="cval">' + pl + '</div></div>';
     }
+    if (o.persons) html += '<div class="crow"><div class="clabel">Personnes</div><div class="cval">' + o.persons + '</div></div>';
     if (o.pickupTime) html += '<div class="crow"><div class="clabel">Heure</div><div class="cval">' + o.pickupTime + '</div></div>';
     if (o.email) html += '<div class="crow"><div class="clabel">Email</div><div class="cval">' + o.email + '</div></div>';
     if (o.phone) html += '<div class="crow"><div class="clabel">Tél.</div><div class="cval">' + o.phone + '</div></div>';
     html += '<div class="card-id">#' + o.id + '</div>';
-    if (isB) html += '<button class="btn-del" data-id="' + o.id + '">Supprimer</button>';
+    if (isB || isBrunch) html += '<button class="btn-del" data-id="' + o.id + '">Supprimer</button>';
     html += '</div>';
   });
 
@@ -929,15 +1005,16 @@ function renderPanel(ds, ords) {
   panel.innerHTML = html;
 
   var addBtn = panel.querySelector('#btnPanelAdd');
-  if (addBtn) {
-    addBtn.addEventListener('click', function() { openModal(ds); });
-  }
+  if (addBtn) addBtn.addEventListener('click', function() { openModal(ds); });
+
+  var brunchBtn = panel.querySelector('#btnPanelBrunch');
+  if (brunchBtn) brunchBtn.addEventListener('click', function() { openBrunchModal(ds); });
 
   panel.querySelectorAll('.btn-del').forEach(function(b) {
     b.addEventListener('click', function() {
       if (!confirm('Supprimer cette commande ?')) return;
       var id = b.getAttribute('data-id');
-      fetch(boutiqueUrl(), {method:'DELETE', headers:{'Content-Type':'application/json', 'x-kubo-secret': KUBO_SECRET}, body:JSON.stringify({id:id})})
+      fetch(boutiqueUrl(), {method:'DELETE', headers:{'Content-Type':'application/json','x-kubo-secret':KUBO_SECRET}, body:JSON.stringify({id:id})})
         .then(function() {
           boutiqueOrders = boutiqueOrders.filter(function(o) { return o.id !== id; });
           selDate = null;
@@ -1056,6 +1133,57 @@ document.getElementById('modal').addEventListener('click', function(e) {
 document.getElementById('btnPwd').addEventListener('click', checkPwd);
 document.getElementById('pwd').addEventListener('keydown', function(e) { if(e.key==='Enter') checkPwd(); });
 
+
+document.getElementById('btnBrunchCancel').addEventListener('click', closeBrunchModal);
+document.getElementById('btnBrunchSave').addEventListener('click', saveBrunchModal);
+document.getElementById('modalBrunch').addEventListener('click', function(e) {
+  if (e.target === document.getElementById('modalBrunch')) closeBrunchModal();
+});
+
+function openBrunchModal(dateStr) {
+  document.getElementById('bName').value = '';
+  document.getElementById('bPhone').value = '';
+  document.getElementById('bPersons').value = '';
+  document.getElementById('bTime').value = '';
+  document.getElementById('bDate').value = dateStr || '';
+  var sub = dateStr ? new Date(dateStr + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'}) : '';
+  document.getElementById('brunchModalSub').textContent = sub ? sub.charAt(0).toUpperCase() + sub.slice(1) : '—';
+  document.getElementById('modalBrunch').classList.add('on');
+  setTimeout(function() { document.getElementById('bName').focus(); }, 100);
+}
+
+function closeBrunchModal() {
+  document.getElementById('modalBrunch').classList.remove('on');
+}
+
+function saveBrunchModal() {
+  var name = document.getElementById('bName').value.trim();
+  var date = document.getElementById('bDate').value;
+  var persons = document.getElementById('bPersons').value;
+  var time = document.getElementById('bTime').value;
+  if (!name) { alert('Nom requis'); return; }
+  if (!persons || persons < 1) { alert('Nombre de personnes requis'); return; }
+  if (!time) { alert('Heure requise'); return; }
+  var order = {
+    id: 'br-' + Date.now(), source: 'brunch', client: name,
+    phone: document.getElementById('bPhone').value.trim(),
+    persons: parseInt(persons),
+    products: [{ name: 'Brunch du samedi', size: '', qty: parseInt(persons) }],
+    total: '—', dateKey: date, pickupTime: time, email: ''
+  };
+  fetch(boutiqueUrl(), {method:'POST', headers:{'Content-Type':'application/json','x-kubo-secret':KUBO_SECRET}, body:JSON.stringify(order)})
+    .then(function() {
+      boutiqueOrders.push(order);
+      closeBrunchModal();
+      selDate = date;
+      renderCal();
+      var byDate = {};
+      allOrders().forEach(function(o){ if(!byDate[o.dateKey]) byDate[o.dateKey]=[]; byDate[o.dateKey].push(o); });
+      if (byDate[date]) renderPanel(date, byDate[date]);
+    })
+    .catch(function(e) { alert('Erreur: ' + e.message); });
+}
+
 if (sessionStorage.getItem('kubo_ok') === '1') {
   KUBO_SECRET = sessionStorage.getItem('kubo_secret') || '';
   afterLogin();
@@ -1063,6 +1191,42 @@ if (sessionStorage.getItem('kubo_ok') === '1') {
   document.getElementById('spwd').style.display = 'flex';
 }
 </script>
+
+<!-- BRUNCH MODAL -->
+<div id="modalBrunch">
+  <div class="mbox">
+    <div class="mtitle">Nouveau brunch</div>
+    <div class="msub" id="brunchModalSub">—</div>
+    <div class="mgrid">
+      <div class="mfield full">
+        <label>Nom du client *</label>
+        <input type="text" id="bName" placeholder="Prénom Nom">
+      </div>
+      <div class="mfield full">
+        <label>Téléphone</label>
+        <input type="tel" id="bPhone" placeholder="06 XX XX XX XX">
+      </div>
+      <div class="mfield">
+        <label>Nombre de personnes *</label>
+        <input type="number" id="bPersons" min="1" placeholder="2">
+      </div>
+      <div class="mfield">
+        <label>Heure *</label>
+        <select id="bTime">
+          <option value="">— Choisir —</option>
+          <option value="10:30">10h30</option>
+          <option value="12:00">12h00</option>
+          <option value="13:30">13h30</option>
+        </select>
+      </div>
+    </div>
+    <input type="hidden" id="bDate">
+    <div class="mbtns">
+      <button class="mbtn-cancel" id="btnBrunchCancel">Annuler</button>
+      <button class="mbtn-save mbtn-brunch" id="btnBrunchSave">Enregistrer</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
