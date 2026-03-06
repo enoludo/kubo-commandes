@@ -194,17 +194,18 @@ body {
 .dcell.past .dnum { color: var(--light-text); }
 .dcell.sel .dnum { color: var(--white); position: relative; z-index: 2; }
 
-/* Badges top-right — above sel-bar */
+/* Badges — centered in cell */
 .badges-row {
   position: absolute;
-  top: 4px;
-  right: 8px;
-  height: 38px;
+  inset: 0;
   display: flex;
-  gap: 3px;
   align-items: center;
+  justify-content: center;
+  gap: 4px;
   z-index: 2;
+  pointer-events: none;
 }
+.dot { pointer-events: auto; }
 .dot {
   width: 26px; height: 26px;
   border-radius: 50%;
@@ -219,20 +220,23 @@ body {
 .dot.web { background: var(--blue-badge); }
 .dot.boutique { background: var(--green-badge); }
 
-/* Selection bar — behind dots (z-index 1), fills top of cell */
+/* Selection bar — full cell */
 .sel-bar {
   display: none;
   position: absolute;
-  top: 4px;
-  left: 4px;
-  right: 4px;
-  height: 38px;
+  inset: 0;
   background: var(--dark);
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   z-index: 1;
 }
 .dcell.sel .sel-bar { display: block; }
-.dcell.sel .btn-cell-add { display: flex; }
+
+/* Hover desktop — gris clair */
+.dcell:not(.other):not(.past):not(.sel):hover { background: #EDEDF4; cursor: pointer; }
+.dcell:not(.other).past:hover { cursor: default; }
+
+/* btn-cell-add — désactivé sur desktop */
+.btn-cell-add { display: none !important; }
 
 /* Hover btn + */
 .btn-cell-add {
@@ -297,13 +301,48 @@ body {
 @keyframes slideDown { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
 @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0;
+}
+
 .panel-date {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: .08em;
   text-transform: uppercase;
   color: #999;
-  margin-bottom: 16px;
+  margin-bottom: 0;
+}
+
+.btn-panel-add {
+  background: var(--green);
+  color: var(--white);
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.btn-panel-add:hover { background: var(--green-hover); }
+
+.panel-date {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #999;
+  margin-bottom: 0;
 }
 
 .cards {
@@ -480,41 +519,15 @@ body {
   .dcell { aspect-ratio: 1; min-height: unset; padding: 0; }
   .dnum { font-size: 10px; position: absolute; top: 2px; left: 4px; }
 
-  /* Dots — centered in cell */
+  /* Dots — responsive size */
   .dot { width: min(24px, calc((100% - 16px) / 2)); height: min(24px, calc((100% - 16px) / 2)); font-size: min(11px, 2.5vw); }
-  .badges-row {
-    position: absolute; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    gap: 4px; top: 0; right: 0; height: 100%;
-  }
 
-  /* Sel bar — full cell dark overlay */
-  .sel-bar { height: 100%; top: 0; left: 0; right: 0; border-radius: var(--radius-sm); }
-  .dcell.sel .dnum { color: var(--white); z-index: 2; position: absolute; }
-  .dcell.sel .badges-row { z-index: 2; }
-
-  /* Hide btn+ inside cells on mobile */
-  .btn-cell-add { display: none !important; }
-  .dcell:not(.other):not(.past):hover .btn-cell-add { display: none !important; }
-
-  /* Panel add button */
-  .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0; }
-  .panel-date { margin-bottom: 0; }
-  .btn-panel-add {
-    background: var(--green); color: var(--white);
-    border: none; border-radius: 20px;
-    padding: 8px 16px;
-    font-family: 'Poppins', sans-serif;
-    font-size: 12px; font-weight: 600;
-    display: flex; align-items: center; gap: 4px;
-    cursor: pointer; white-space: nowrap;
-    flex-shrink: 0;
-  }
+  /* Sel bar — smaller radius on mobile */
+  .sel-bar { border-radius: 3px; }
 
   /* Panel */
   .panel { padding: 16px; border-radius: var(--radius); }
   .cards { grid-template-columns: 1fr; padding-top: 16px; }
-  .cards-hidden { display: none; }
 
   /* Modal */
   .mbox { padding: 24px 20px; }
@@ -835,13 +848,13 @@ function renderCal() {
         return;
       }
 
-      // Desktop
+      // Desktop — même comportement que mobile
+      if (isPast && !dayOrds.length) return;
       if (selDate === ds2) {
         selDate = null;
         document.getElementById('panel').classList.remove('on');
         renderCal(); return;
       }
-      if (!dayOrds.length) return;
       selDate = ds2;
       renderCal();
       renderPanel(ds2, dayOrds);
@@ -883,15 +896,13 @@ function renderPanel(ds, ords) {
   label = label.charAt(0).toUpperCase() + label.slice(1);
 
   var showAddBtn = !isPast;
-  var panelHeader = isMobile
-    ? '<div class="panel-header">'
-      + '<div class="panel-date">' + label + (ords.length ? ' — ' + ords.length + ' commande' + (ords.length > 1 ? 's' : '') : '') + '</div>'
-      + (showAddBtn ? '<button class="btn-panel-add" id="btnPanelAdd">+ Nouvelle commande</button>' : '')
-      + '</div>'
-    : '<div class="panel-date">' + label + ' — ' + ords.length + ' commande' + (ords.length > 1 ? 's' : '') + '</div>';
+  var panelHeader = '<div class="panel-header">'
+    + '<div class="panel-date">' + label + (ords.length ? ' — ' + ords.length + ' commande' + (ords.length > 1 ? 's' : '') : '') + '</div>'
+    + (showAddBtn ? '<button class="btn-panel-add" id="btnPanelAdd">+ Nouvelle commande</button>' : '')
+    + '</div>';
 
   var html = panelHeader;
-  html += '<div class="cards' + (isMobile && !ords.length ? ' cards-hidden' : '') + '">';
+  html += '<div class="cards' + (!ords.length ? ' cards-hidden' : '') + '">';
 
   ords.forEach(function(o, i) {
     var isB = o.source === 'boutique';
