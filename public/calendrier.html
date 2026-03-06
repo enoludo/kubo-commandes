@@ -1053,6 +1053,10 @@ function renderPanel(ds, ords) {
       if (!confirm('Supprimer cette commande ?')) return;
       var id = b.getAttribute('data-id');
       fetch(boutiqueUrl(), {method:'DELETE', headers:{'Content-Type':'application/json','x-kubo-secret':KUBO_SECRET}, body:JSON.stringify({id:id})})
+        .then(function(r) {
+          if (!r.ok) throw new Error('Erreur serveur ' + r.status);
+          return r.json();
+        })
         .then(function() {
           boutiqueOrders = boutiqueOrders.filter(function(o) { return o.id !== id; });
           selDate = null;
@@ -1139,6 +1143,10 @@ function saveModal() {
     email: '', status: ''
   };
   fetch(boutiqueUrl(), {method:'POST', headers:{'Content-Type':'application/json', 'x-kubo-secret': KUBO_SECRET}, body:JSON.stringify(order)})
+    .then(function(r) {
+      if (!r.ok) throw new Error('Erreur serveur ' + r.status);
+      return r.json();
+    })
     .then(function() {
       boutiqueOrders.push(order);
       closeModal();
@@ -1210,6 +1218,10 @@ function saveBrunchModal() {
     total: '—', dateKey: date, pickupTime: time, email: ''
   };
   fetch(boutiqueUrl(), {method:'POST', headers:{'Content-Type':'application/json','x-kubo-secret':KUBO_SECRET}, body:JSON.stringify(order)})
+    .then(function(r) {
+      if (!r.ok) throw new Error('Erreur serveur ' + r.status);
+      return r.json();
+    })
     .then(function() {
       boutiqueOrders.push(order);
       closeBrunchModal();
