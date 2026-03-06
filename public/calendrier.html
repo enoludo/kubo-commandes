@@ -480,19 +480,41 @@ body {
   .dcell { aspect-ratio: 1; min-height: unset; padding: 0; }
   .dnum { font-size: 10px; position: absolute; top: 2px; left: 4px; }
 
-  /* Dots */
-  .dot { width: 16px; height: 16px; font-size: 8px; }
-  .badges-row { right: 6px; top: 2px; height: calc((100% - 6px) / 2); gap: 2px; }
+  /* Dots — centered in cell */
+  .dot { width: min(24px, calc((100% - 16px) / 2)); height: min(24px, calc((100% - 16px) / 2)); font-size: min(11px, 2.5vw); }
+  .badges-row {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    gap: 4px; top: 0; right: 0; height: 100%;
+  }
 
-  /* Sel bar */
-  .sel-bar { height: calc((100% - 6px) / 2); top: 2px; left: 2px; right: 2px; border-radius: 3px; }
+  /* Sel bar — full cell dark overlay */
+  .sel-bar { height: 100%; top: 0; left: 0; right: 0; border-radius: var(--radius-sm); }
+  .dcell.sel .dnum { color: var(--white); z-index: 2; position: absolute; }
+  .dcell.sel .badges-row { z-index: 2; }
 
-  /* Add button */
-  .btn-cell-add { height: calc((100% - 6px) / 2); bottom: 2px; left: 2px; right: 2px; font-size: 14px; border-radius: 3px; }
+  /* Hide btn+ inside cells on mobile */
+  .btn-cell-add { display: none !important; }
+  .dcell:not(.other):not(.past):hover .btn-cell-add { display: none !important; }
+
+  /* Panel add button */
+  .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0; }
+  .panel-date { margin-bottom: 0; }
+  .btn-panel-add {
+    background: var(--green); color: var(--white);
+    border: none; border-radius: 20px;
+    padding: 8px 16px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 12px; font-weight: 600;
+    display: flex; align-items: center; gap: 4px;
+    cursor: pointer; white-space: nowrap;
+    flex-shrink: 0;
+  }
 
   /* Panel */
   .panel { padding: 16px; border-radius: var(--radius); }
-  .cards { grid-template-columns: 1fr; }
+  .cards { grid-template-columns: 1fr; padding-top: 16px; }
+  .cards-hidden { display: none; }
 
   /* Modal */
   .mbox { padding: 24px 20px; }
@@ -793,27 +815,16 @@ function renderCal() {
       var dayOrds = byDate[ds2] || [];
       var isPast = ds2 < today;
 
-      // Case passée sans commande → rien
-      if (isPast && !dayOrds.length) return;
-
       if (isMobile) {
-        // Case vide future : 1er tap = montre btn+, 2e tap = ouvre modal
-        if (!dayOrds.length && !isPast) {
-          if (c.classList.contains('add-ready')) {
-            c.classList.remove('add-ready');
-            openModal(ds2);
-          } else {
-            grid.querySelectorAll('.add-ready').forEach(function(x) { x.classList.remove('add-ready'); });
-            c.classList.add('add-ready');
-          }
-          return;
-        }
-        // Case avec commandes (passée ou future) : tap = panel
+        // Case passée sans commande → rien
+        if (isPast && !dayOrds.length) return;
+        // Deselect si déjà sélectionné
         if (selDate === ds2) {
           selDate = null;
           document.getElementById('panel').classList.remove('on');
           renderCal(); return;
         }
+        // Tout tap ouvre le panel (case vide ou avec commandes)
         selDate = ds2;
         renderCal();
         renderPanel(ds2, dayOrds);
@@ -860,13 +871,24 @@ function renderCal() {
 
 function renderPanel(ds, ords) {
   var panel = document.getElementById('panel');
+  var isMobile = window.innerWidth <= 768;
+  var today = new Date().toISOString().split('T')[0];
+  var isPast = ds < today;
   var label = new Date(ds + 'T12:00:00').toLocaleDateString('fr-FR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   });
   label = label.charAt(0).toUpperCase() + label.slice(1);
 
-  var html = '<div class="panel-date">' + label + ' — ' + ords.length + ' commande' + (ords.length > 1 ? 's' : '') + '</div>';
-  html += '<div class="cards">';
+  var showAddBtn = !isPast;
+  var panelHeader = isMobile
+    ? '<div class="panel-header">'
+      + '<div class="panel-date">' + label + (ords.length ? ' — ' + ords.length + ' commande' + (ords.length > 1 ? 's' : '') : '') + '</div>'
+      + (showAddBtn ? '<button class="btn-panel-add" id="btnPanelAdd">+ Nouvelle commande</button>' : '')
+      + '</div>'
+    : '<div class="panel-date">' + label + ' — ' + ords.length + ' commande' + (ords.length > 1 ? 's' : '') + '</div>';
+
+  var html = panelHeader;
+  html += '<div class="cards' + (isMobile && !ords.length ? ' cards-hidden' : '') + '">';
 
   ords.forEach(function(o, i) {
     var isB = o.source === 'boutique';
@@ -889,13 +911,24 @@ function renderPanel(ds, ords) {
 
   html += '</div>';
   panel.innerHTML = html;
+
+  var addBtn = panel.querySelector('#btnPanelAdd');
+  if (addBtn) {
+    addBtn.addEventListener('click', function() { openModal(ds); });
+  }
+
   panel.querySelectorAll('.btn-del').forEach(function(b) {
     b.addEventListener('click', function() {
       if (!confirm('Supprimer cette commande ?')) return;
-      boutiqueOrders = boutiqueOrders.filter(function(o) { return o.id !== b.getAttribute('data-id'); });
-      selDate = null;
-      panel.classList.remove('on');
-      renderCal();
+      var id = b.getAttribute('data-id');
+      fetch(boutiqueUrl(), {method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:id})})
+        .then(function() {
+          boutiqueOrders = boutiqueOrders.filter(function(o) { return o.id !== id; });
+          selDate = null;
+          panel.classList.remove('on');
+          renderCal();
+        })
+        .catch(function(e) { alert('Erreur: ' + e.message); });
     });
   });
   panel.classList.add('on');
