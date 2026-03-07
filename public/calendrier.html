@@ -792,14 +792,6 @@ function loadWeb() {
     .then(function(d) {
       var allParsed = parseWeb(d.orders || []);
       var brunchParsed = parseBrunch(d.orders || []);
-      console.log('[ORDERS] total:', (d.orders||[]).length);
-      (d.orders||[]).slice(0,3).forEach(function(o) {
-        console.log('[ORDER sample]', JSON.stringify({
-          id: o.orderId || o.id,
-          items: (o.purchasedItems||[]).map(function(it){ return {name: it.productName, variant: it.variantName}; }),
-          customData: o.customData
-        }));
-      });
       webOrders = allParsed;
       brunchOrders = brunchParsed;
       renderCal();
@@ -819,40 +811,35 @@ function parseBrunch(raw) {
     var isBrunch = items.some(function(it){ return (it.productName||'').toLowerCase().indexOf('brunch') !== -1; });
     if (!isBrunch) return null;
     items.forEach(function(it) { if (it.variantName) variant = it.variantName; });
-    console.log('[BRUNCH]', variant, JSON.stringify(o.customData || []));
 
-    // Extraire l'année : on cherche le prochain samedi futur correspondant au jour/mois
-    var dateKey = null;
-    var m = variant.match(/(\d{1,2})\s+(\w+)/i);
-    if (m) {
-      var day = parseInt(m[1]);
-      var monthNum = months[m[2].toLowerCase()];
-      if (monthNum) {
-        var today = new Date();
-        today.setHours(0,0,0,0);
-        // Essayer cette année, puis l'année suivante
-        var found = false;
-        for (var yearOffset = 0; yearOffset <= 1 && !found; yearOffset++) {
-          var yr = today.getFullYear() + yearOffset;
-          var candidate = new Date(yr, monthNum - 1, day, 12, 0, 0);
-          if (candidate >= today) {
-            dateKey = yr + '-' + String(monthNum).padStart(2,'0') + '-' + String(day).padStart(2,'0');
-            found = true;
-          }
-        }
-        // Si toujours pas trouvé (date très passée), on prend quand même avec l'année courante
-        if (!dateKey) {
-          var yr = today.getFullYear();
-          dateKey = yr + '-' + String(monthNum).padStart(2,'0') + '-' + String(day).padStart(2,'0');
-        }
-      }
+    // Extraire heure et date depuis variantName
+    // ex: "Brunch du Samedi Horaire: 10:30, Date: Samedi 14 Février"
+    var timeMatch = variant.match(/Horaire:\s*(\d{1,2}:\d{2})/i);
+    var dateMatch = variant.match(/Date:\s*\w+\s+(\d{1,2})\s+(\w+)/i);
+    if (!dateMatch) return null;
+
+    var months = {janvier:1,février:2,mars:3,avril:4,mai:5,juin:6,juillet:7,août:8,septembre:9,octobre:10,novembre:11,décembre:12};
+    var brunchDay = parseInt(dateMatch[1]);
+    var brunchMonth = months[dateMatch[2].toLowerCase()];
+    if (!brunchMonth) return null;
+
+    // Extraire l'année depuis customData (date de commande DD-MM-YYYY)
+    var orderYear = null, orderMonth = null;
+    var fields = o.customData || [];
+    for (var i = 0; i < fields.length; i++) {
+      var dm = (fields[i].textInput || '').match(/(\d{2})-(\d{2})-(\d{4})/);
+      if (dm) { orderMonth = parseInt(dm[2]); orderYear = parseInt(dm[3]); break; }
     }
-    if (!dateKey) return null;
+
+    // Déduire l'année du brunch : si le mois du brunch est avant le mois de commande → année suivante
+    var yr = orderYear || new Date().getFullYear();
+    if (orderYear && brunchMonth < orderMonth) yr = orderYear + 1;
+
+    var dateKey = yr + '-' + String(brunchMonth).padStart(2,'0') + '-' + String(brunchDay).padStart(2,'0');
     var ci = o.customerInfo || {};
     var addr = (o.allAddresses||[])[0]||{};
     var total = o.customerPaid && o.customerPaid.value !== undefined
       ? (o.customerPaid.value/100).toFixed(2)+'€' : '—';
-    var timeMatch = variant.match(/(\d{1,2}[h:]\d{2})/i);
     return {
       id: o.orderId || o.id || '',
       source: 'brunch',
