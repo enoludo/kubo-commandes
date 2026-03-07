@@ -401,6 +401,8 @@ body {
 .cval { font-size: 12px; color: var(--ink); line-height: 1.5; }
 
 .card-id { font-size: 9px; color: #CCC; margin-top: 8px; }
+.prod-list { margin: 0; padding-left: 14px; }
+.prod-list li { font-size: 12px; color: var(--ink); line-height: 1.6; }
 
 /* Paid toggle */
 .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0; }
@@ -1090,9 +1092,12 @@ function renderPanel(ds, ords) {
     html += '<div class="card-header"><div class="card-name">' + o.client + '</div><div class="card-amt">' + o.total + '</div></div>';
     if (o.products && o.products.length) {
       var pl = o.products.map(function(p) {
-        return typeof p === 'object' ? p.qty + '× ' + p.name + (p.size ? ' (' + p.size + ')' : '') : p;
-      }).join('<br>');
-      html += '<div class="crow"><div class="clabel">Produits</div><div class="cval">' + pl + '</div></div>';
+        if (typeof p !== 'object') return '<li>' + p + '</li>';
+        // Supprimer la répétition du nom dans la taille (ex: "Tarte XX Taille: Y" → "Taille: Y")
+        var size = (p.size || '').replace(new RegExp('^' + p.name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\s*', 'i'), '').trim();
+        return '<li>' + p.qty + '× ' + p.name + (size ? ', ' + size : '') + '</li>';
+      }).join('');
+      html += '<div class="crow"><div class="clabel">Produits</div><div class="cval"><ul class="prod-list">' + pl + '</ul></div></div>';
     }
     if (o.persons) html += '<div class="crow"><div class="clabel">Personnes</div><div class="cval">' + o.persons + '</div></div>';
     if (o.pickupTime) html += '<div class="crow"><div class="clabel">Heure</div><div class="cval">' + o.pickupTime + '</div></div>';
