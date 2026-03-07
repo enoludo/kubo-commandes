@@ -811,6 +811,9 @@ function parseBrunch(raw) {
     var isBrunch = items.some(function(it){ return (it.productName||'').toLowerCase().indexOf('brunch') !== -1; });
     if (!isBrunch) return null;
     items.forEach(function(it) { if (it.variantName) variant = it.variantName; });
+    if ((o.orderId||o.id||'').indexOf('f18') !== -1) {
+      console.log('[FELIX]', variant, JSON.stringify(o.customData||[]));
+    }
 
     // Extraire heure et date depuis variantName
     // ex: "Brunch du Samedi Horaire: 10:30, Date: Samedi 14 Février"
