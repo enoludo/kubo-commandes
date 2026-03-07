@@ -792,6 +792,14 @@ function loadWeb() {
     .then(function(d) {
       var allParsed = parseWeb(d.orders || []);
       var brunchParsed = parseBrunch(d.orders || []);
+      console.log('[ORDERS] total:', (d.orders||[]).length);
+      (d.orders||[]).slice(0,3).forEach(function(o) {
+        console.log('[ORDER sample]', JSON.stringify({
+          id: o.orderId || o.id,
+          items: (o.purchasedItems||[]).map(function(it){ return {name: it.productName, variant: it.variantName}; }),
+          customData: o.customData
+        }));
+      });
       webOrders = allParsed;
       brunchOrders = brunchParsed;
       renderCal();
@@ -811,6 +819,7 @@ function parseBrunch(raw) {
     var isBrunch = items.some(function(it){ return (it.productName||'').toLowerCase().indexOf('brunch') !== -1; });
     if (!isBrunch) return null;
     items.forEach(function(it) { if (it.variantName) variant = it.variantName; });
+    console.log('[BRUNCH]', variant, JSON.stringify(o.customData || []));
 
     // Extraire l'année : on cherche le prochain samedi futur correspondant au jour/mois
     var dateKey = null;
