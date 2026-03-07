@@ -1075,7 +1075,7 @@ function renderPanel(ds, ords) {
     var isB = o.source === 'boutique';
     var isBrunch = o.source === 'brunch';
     var canToggle = isB || isBrunch;
-    var badgeLabel = isB ? 'Boutique' : isBrunch ? 'Brunch' : 'Site web';
+    var badgeLabel = isB ? 'Boutique' : isBrunch ? (o.id.indexOf('br-') === 0 ? 'Brunch Boutique' : 'Brunch Web') : 'Site web';
     var badgeClass = isB ? 'boutique' : isBrunch ? 'brunch' : 'web';
     var paidClass = o.paid ? (isBrunch ? 'paid-brunch' : 'paid-boutique') : 'unpaid';
     var paidIcon = o.paid
