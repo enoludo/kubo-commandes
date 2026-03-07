@@ -811,12 +811,8 @@ function parseBrunch(raw) {
     var isBrunch = items.some(function(it){ return (it.productName||'').toLowerCase().indexOf('brunch') !== -1; });
     if (!isBrunch) return null;
     items.forEach(function(it) { if (it.variantName) variant = it.variantName; });
-    if ((o.orderId||o.id||'').indexOf('f18') !== -1) {
-      console.log('[FELIX]', variant, JSON.stringify(o.customData||[]));
-    }
 
     // Extraire heure et date depuis variantName
-    // ex: "Brunch du Samedi Horaire: 10:30, Date: Samedi 14 Février"
     var timeMatch = variant.match(/Horaire:\s*(\d{1,2}:\d{2})/i);
     var dateMatch = variant.match(/Date:\s*\w+\s+(\d{1,2})\s+(\w+)/i);
     if (!dateMatch) return null;
@@ -826,19 +822,25 @@ function parseBrunch(raw) {
     var brunchMonth = months[dateMatch[2].toLowerCase()];
     if (!brunchMonth) return null;
 
-    // Extraire l'année depuis customData (date de commande DD-MM-YYYY)
-    var orderYear = null, orderMonth = null;
+    // Extraire la date de commande depuis customData (DD-MM-YYYY)
+    var orderDate = null;
     var fields = o.customData || [];
     for (var i = 0; i < fields.length; i++) {
       var dm = (fields[i].textInput || '').match(/(\d{2})-(\d{2})-(\d{4})/);
-      if (dm) { orderMonth = parseInt(dm[2]); orderYear = parseInt(dm[3]); break; }
+      if (dm) { orderDate = new Date(parseInt(dm[3]), parseInt(dm[2])-1, parseInt(dm[1])); break; }
     }
 
-    // Déduire l'année du brunch : si le mois du brunch est avant le mois de commande → année suivante
-    var yr = orderYear || new Date().getFullYear();
-    if (orderYear && brunchMonth < orderMonth) yr = orderYear + 1;
+    // Choisir l'année qui donne la date de brunch la plus proche de la date de commande
+    var baseYear = orderDate ? orderDate.getFullYear() : new Date().getFullYear();
+    var best = null, bestDiff = Infinity;
+    for (var offset = -1; offset <= 1; offset++) {
+      var yr = baseYear + offset;
+      var candidate = new Date(yr, brunchMonth - 1, brunchDay);
+      var diff = orderDate ? Math.abs(candidate - orderDate) : candidate - new Date();
+      if (diff < bestDiff) { bestDiff = diff; best = yr; }
+    }
 
-    var dateKey = yr + '-' + String(brunchMonth).padStart(2,'0') + '-' + String(brunchDay).padStart(2,'0');
+    var dateKey = best + '-' + String(brunchMonth).padStart(2,'0') + '-' + String(brunchDay).padStart(2,'0');
     var ci = o.customerInfo || {};
     var addr = (o.allAddresses||[])[0]||{};
     var total = o.customerPaid && o.customerPaid.value !== undefined
